@@ -1,0 +1,64 @@
+<!--
+Base Bot Banner dashboard radar-chart abstraction template.
+Copy this component when abstracting radar chart cards.
+Scale .radar-card-abstract as a whole; the center radar graphic scales with the card.
+-->
+<style>
+  .radar-card-abstract {
+    width: 431px;
+    height: 452px;
+    border-radius: 16px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .radar-title-skeleton {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    width: 90px;
+    height: 18px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .radar-visual {
+    position: absolute;
+    left: 50%;
+    top: 85px;
+    width: min(330px, calc(100% - 88px));
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+  }
+
+  .radar-grid {
+    stroke: rgba(15, 15, 16, 0.06);
+    stroke-width: 1;
+    fill: none;
+  }
+
+  .radar-shape {
+    fill: rgba(15, 15, 16, 0.06);
+    stroke: rgba(15, 15, 16, 0.06);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+</style>
+
+<div class="radar-card-abstract">
+  <div class="radar-title-skeleton"></div>
+  <svg class="radar-visual" viewBox="0 0 330 330" fill="none" aria-hidden="true">
+    <circle class="radar-grid" cx="165" cy="165" r="165"></circle>
+    <circle class="radar-grid" cx="165" cy="165" r="124"></circle>
+    <circle class="radar-grid" cx="165" cy="165" r="82"></circle>
+    <circle class="radar-grid" cx="165" cy="165" r="41"></circle>
+    <line class="radar-grid" x1="0" y1="165" x2="330" y2="165"></line>
+    <line class="radar-grid" x1="165" y1="0" x2="165" y2="330"></line>
+    <line class="radar-grid" x1="48.3" y1="48.3" x2="281.7" y2="281.7"></line>
+    <line class="radar-grid" x1="281.7" y1="48.3" x2="48.3" y2="281.7"></line>
+    <path class="radar-shape" d="M165 54 L225 105 L298 165 L222 207 L247 279 L165 252 L104 272 L55 165 L114 116 Z"></path>
+    <path class="radar-shape" d="M165 86 L202 128 L225 165 L197 205 L165 290 L113 216 L86 165 L123 138 Z"></path>
+    <path class="radar-shape" d="M165 70 L188 136 L222 119 L200 165 L252 255 L165 206 L102 222 L66 165 L132 132 Z"></path>
+  </svg>
+</div>

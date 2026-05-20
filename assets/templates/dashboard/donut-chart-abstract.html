@@ -1,0 +1,98 @@
+<!--
+Base Bot Banner dashboard donut-chart abstraction template.
+Copy this component when abstracting donut/ring chart cards.
+Scale .donut-card-abstract as a whole, or resize the card while preserving its ratio.
+The donut graphic and center placeholders use proportional sizing so they adapt to the card.
+Reference: Figma node 53:44046. The visible donut container is 300x300 at 66,99.
+If Figma reports a 400x400 inner image at -50,-50, keep it as crop context only.
+-->
+<style>
+  .donut-card-abstract {
+    width: 431px;
+    height: 452px;
+    border-radius: 16px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .donut-title-skeleton {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    width: 90px;
+    height: 18px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .donut-visual {
+    position: absolute;
+    left: 15.31%;
+    top: 21.9%;
+    width: 69.61%;
+    aspect-ratio: 1;
+  }
+
+  .donut-ring {
+    position: absolute;
+    inset: 1%;
+    border-radius: 50%;
+    background:
+      conic-gradient(
+        from 0deg,
+        rgba(15, 15, 16, 0.06) 0deg 76deg,
+        #fff 76deg 78deg,
+        rgba(15, 15, 16, 0.06) 78deg 147deg,
+        #fff 147deg 149deg,
+        rgba(15, 15, 16, 0.06) 149deg 236deg,
+        #fff 236deg 238deg,
+        rgba(15, 15, 16, 0.06) 238deg 306deg,
+        #fff 306deg 308deg,
+        rgba(15, 15, 16, 0.06) 308deg 360deg
+      );
+  }
+
+  .donut-ring::after {
+    content: "";
+    position: absolute;
+    inset: 16%;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4.33%;
+  }
+
+  .donut-value-skeleton {
+    width: 36%;
+    height: 10.67%;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .donut-label-skeleton {
+    width: 20.67%;
+    height: 4.67%;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+</style>
+
+<div class="donut-card-abstract">
+  <div class="donut-title-skeleton"></div>
+  <div class="donut-visual" aria-hidden="true">
+    <div class="donut-ring"></div>
+    <div class="donut-center">
+      <div class="donut-value-skeleton"></div>
+      <div class="donut-label-skeleton"></div>
+    </div>
+  </div>
+</div>
