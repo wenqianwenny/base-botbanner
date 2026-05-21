@@ -269,8 +269,9 @@ Rules:
 - Do not move result text into a new location, add a comparison panel, change list behavior, or invent an extra state unless the source design already contains it.
 - For mobile source UI, remove OS/system chrome such as status bars, dock bars, battery/signal areas, and home indicators by default. Preserve product chrome such as nav bars, tabs, field rows, and action buttons when they support product context.
 - If the source UI contains a real image or cover asset and that image remains visible, use the actual Figma/source asset. Do not approximate source images with CSS gradients, generated images, or unrelated background assets. Backgrounds for the overall banner still come only from `figma-refs/backgrounds/`.
-- Product surface outlines used only for banner separation should be subtle white translucent strokes, not dark gray/green device frames, unless the source design explicitly shows that frame. For flat panels, use `1px solid rgba(255,255,255,0.72)` by default; if the surface itself has a white/solid fill, also set `background-clip: padding-box`.
-- Device/mockup frames are different from simple panel outlines: build them as an outside wrapper, not as an inset border on the product UI. Use an outer frame with `padding: 6px; background: rgba(255,255,255,0.5); border-radius: outerRadius`, and place the real UI inside with a smaller inner radius. The frame must not consume, crop, or shift the real source UI content. If the frame bottom is meant to be visible, keep the full outside wrapper inside the banner; otherwise an intentionally cropped side should not be judged as a missing frame.
+- Product surface outlines used only for light separation should be subtle white translucent strokes, not dark gray/green device frames, unless the source design explicitly shows that frame. For small flat panels or foreground result panels, use `1px solid rgba(255,255,255,0.72)` by default; if the surface itself has a white/solid fill, also set `background-clip: padding-box`.
+- Secondary/background product UI frames are stronger than a 1px line. When a lower-layer interface is shown as a large product mockup/surface, build its visible outline as an outside wrapper, not as an inset border on the product UI. Use `padding: 6px; background: rgba(255,255,255,0.5); border-radius: outerRadius`, and place the real UI inside with a smaller inner radius. This reads as a 6px white 50% opacity outside frame. The frame must not consume, crop, or shift the real source UI content. If the frame bottom is meant to be visible, keep the full outside wrapper inside the banner; otherwise an intentionally cropped side should not be judged as a missing frame.
+- Do not use only `border: 1px ...` for a large secondary/background interface. That is too thin at banner scale and will disappear after 2x PNG export/downsampling.
 - After generating, visually compare the banner against the source reference for obvious misalignment before final output.
 - If exact fidelity conflicts with banner clarity, keep product logic and key geometry first, then abstract lower-priority details.
 
@@ -353,12 +354,17 @@ Recommended overlap: 15% ~ 35%
 
 If the primary result is a complete product interface/page/view rather than a real floating panel, it should usually take `45%` to `60%` of the 900px banner width, with a practical minimum around `400px`. Do not shrink a complete interface into a narrow popover-like panel just to preserve secondary context.
 
+Source/context product pages must also keep useful scale. If a PC form, questionnaire, table, app page, or workflow canvas is still needed to understand the feature, do not shrink it while leaving large unused background on the other side. It should usually occupy at least `58%` of banner width unless a larger foreground result surface requires the space.
+
+Visible source order must be preserved across modules: questions, table rows, workflow steps, menu order, ranked lists, timeline steps, and configuration stages must not be renumbered or reordered for composition convenience. The feature item keeps its source order and should not be visually demoted below siblings.
+
 ## Primary Panel Centering
 
 Floating primary panels should be visually centered first, especially on the vertical axis.
 
 Default:
 - Use vertical centering for the primary UI (`top: 50%` + `translateY(-50%)`) when the panel height allows the non-cropped safe margin.
+- Compact floating panels such as type pickers, add menus, filter/action/config panels, small popovers, and short result panels should be vertically centered within the banner or composition group when they fit. Do not leave large empty space below a short panel.
 - Keep the panel on the right side only as much as needed to show hierarchy and overlap with the secondary UI.
 - Avoid placing the primary panel too close to the bottom or top edge for decorative tension.
 
@@ -418,11 +424,11 @@ Typical relationship:
 
 ## Margin Priority Rule
 
-All non-cropped UI panels should maintain **20px to 40px margin** from every non-cropped banner edge.
+All non-cropped UI panels should maintain **30px to 50px margin** from every non-cropped banner edge.
 
-Default margin is `32px`. Use `40px` for large primary panels when space allows. Use `20px` only for compact secondary fragments or tight compositions. If a specific case or user prompt explicitly requires `50px`, follow that case-specific requirement.
+Default margin is `36px`. Use `40px` to `50px` for large primary panels when space allows. Use `30px` to `36px` only for compact secondary fragments or tight compositions.
 
-This is a hard rule. If an interface edge is not intentionally cropped by the composition, it must never sit closer than `20px` to the banner boundary.
+This is a hard rule. If an interface edge is not intentionally cropped by the composition, it must never sit closer than `30px` to the banner boundary or farther than `50px` in a way that wastes canvas space.
 
 When space is insufficient to fit all content while respecting the safe margin:
 
@@ -817,6 +823,12 @@ Extracted from component SVGs:
 | Progress bar | full round (pill) | Progress.svg |
 | Checkbox | square | Checkbox.svg |
 
+Rules:
+- Foreground floating panels, modal-like result panels, popovers, and banner-level cards use `12px` radius by default unless the Figma/source component specifies another value.
+- If the source Figma design provides a concrete panel radius, preserve that radius exactly and record it in UI Detail Constraints.
+- Do not inflate floating result panels to `16px`, `20px`, or larger rounded corners just to make them feel softer. Oversized radius makes Base UI look unlike the source product.
+- Add a ui-check marker for fragile foreground panel radius when the panel is hand-coded, for example `/* ui-check radius selector=.polish-panel value=12 */`.
+
 ---
 
 # 10. Line & Stroke System
@@ -1054,6 +1066,8 @@ Rules:
 - Check `figma-refs/components/icons/index.md` first, then read the matching SVG file and reuse its path data.
 - Do not draw a replacement icon when a matching product icon exists.
 - Core feature icons and source-provided semantic icons are product evidence. Table, filter, AI input, voice, send, selected action, and primary field-type icons must use Figma/local SVG assets and be listed in the Asset Lock Manifest. Do not redraw them with CSS approximations.
+- Core semantic icons must also be listed in `Icon Lock Manifest` with a stable role and exact asset path. Render them with `data-icon-role`, for example `<img data-icon-role="polish-panel-header-icon" src="../figma-refs/components/icons/icon_effects_outlined.svg" alt="">`.
+- Do not use CSS-drawn fallback classes for locked icons: `.css-icon`, `.drawn-icon`, `.sparkle-icon`, `.star-icon`, `.magic-icon`, `.polish-star`, `.custom-icon`, or `.fake-icon`.
 - Keep the same icon in every instance of the same product action, such as the trigger button and the floating panel header.
 - For AI polish / 润色, use the EffectsOutlined / polish icon from the icon library, not a generic sparkle fallback.
 

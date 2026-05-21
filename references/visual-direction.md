@@ -2,6 +2,8 @@
 
 Use this file before composing any Base bot banner. It is the taste layer above the implementation rules in `design.md` and the module templates.
 
+Before writing a Visual Strategy for a new banner, resolve the User Choice Gate from `SKILL.md`: background, primary-side layout direction, and primary UI abstraction mode. If the user has not provided these choices, ask for them first. The chosen options constrain the strategy; do not override them based on mood unless the user asks you to choose.
+
 ## Core Goal
 
 Create a memorable, intentional Base product banner, not just a prompt-compliant UI collage.

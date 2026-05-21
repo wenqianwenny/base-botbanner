@@ -62,30 +62,72 @@ Generate 900×500px HTML/CSS banners for Lark Base feature announcements.
 ```
 1. Receive feature description + product UI screenshot
        ↓
-2. Visual Strategy — define the product story, taste constraints, and composition direction
+2. User Choice Gate — ask for background, primary-side layout, and primary UI abstraction mode unless already specified
        ↓
-3. Source UI Audit — identify Base modules and component inventory
+3. Visual Strategy — define the product story, taste constraints, and composition direction
        ↓
-4. Abstraction Plan — decide what stays real, becomes skeleton, or is removed
+4. Source UI Audit — identify Base modules and component inventory
        ↓
-5. Write `output/<banner-name>.brief.md` with the required planning sections
+5. Abstraction Plan — decide what stays real, becomes skeleton, or is removed
        ↓
-6. Load module rules and templates
+6. Write `output/<banner-name>.brief.md` with the required planning sections
        ↓
-7. Define key information and primary/secondary UI
+7. Load module rules and templates
        ↓
-8. Abstract product interfaces — hide unnecessary information
+8. Define key information and primary/secondary UI
        ↓
-9. Banner layout — position primary and secondary UI
+9. Abstract product interfaces — hide unnecessary information
        ↓
-10. Choose background and refine UI details
+10. Banner layout — position primary and secondary UI
        ↓
-11. Quality check and output files
+11. Apply chosen background and refine UI details
+       ↓
+12. Quality check and output files
 ```
 
 ### Step Details
 
-**Step 2 — Visual Strategy**
+**Step 2 — User Choice Gate**
+
+For every new banner request, ask these choices before implementation unless the user has already specified them in the prompt. Do not start drawing before this gate is resolved.
+
+```text
+Before I generate, please choose:
+
+1. Background
+- green-mist
+- green-spring
+- dreamy-pink
+- blue-soft-flow
+- elegant-purple
+
+2. Layout direction
+- Primary UI on the right, secondary/source UI on the left
+- Primary UI on the left, secondary/source UI on the right
+
+3. Primary UI abstraction
+- Preserve primary UI details / do not abstract the primary UI
+- Lightly abstract the primary UI
+```
+
+Rules:
+- If the user already specifies a background, layout side, or abstraction mode, record it and do not ask that item again.
+- If the user explicitly asks to proceed without questions, choose defaults and record them in the brief: background by feature mood, Primary UI right, and lightly abstract only non-core primary details.
+- The abstraction choice applies to the Primary UI only. Secondary/source UI still follows normal abstraction rules.
+- "Preserve primary UI details" means keep real labels, source order, source states, icon choices, and component structure for the primary surface. Low-priority surrounding content may still be removed if it is outside the primary surface or violates safe margins.
+- "Lightly abstract the primary UI" means keep the target/selected result real while skeletonizing low-priority sibling details.
+
+Write the resolved choices into the brief:
+
+```text
+User Choices:
+- Background:
+- Layout direction:
+- Primary UI abstraction:
+- Defaults used:
+```
+
+**Step 3 — Visual Strategy**
 
 Before drawing or coding, use `references/visual-direction.md` to define the banner direction. The goal is to avoid mechanically assembling UI pieces.
 
@@ -112,7 +154,7 @@ Visual Strategy:
 
 Reject plans that rely on decorative filler, fake data, generic AI glow, or extra UI surfaces that do not explain the product path.
 
-**Step 3 — Source UI Audit**
+**Step 4 — Source UI Audit**
 
 Before deciding layout or drawing HTML, inspect the source UI and produce a brief module inventory. The user should not need to name module files or templates.
 
@@ -192,7 +234,7 @@ Module Inventory:
 - Information to remove:
 ```
 
-**Step 4 — Abstraction Plan**
+**Step 5 — Abstraction Plan**
 
 If any source UI is present, write an explicit abstraction plan before loading templates or coding. This is required even when the user does not use the word "abstract".
 
@@ -238,21 +280,37 @@ Asset Lock Manifest:
 - Assets intentionally abstracted:
 ```
 
+When a core semantic icon is visible, also write an Icon Lock Manifest:
+
+```text
+Icon Lock Manifest:
+- role: polish-trigger-icon
+  asset: figma-refs/components/icons/icon_effects_outlined.svg
+  required_in_selector: .polish-button img
+  fallback_allowed: false
+- role: polish-panel-header-icon
+  asset: figma-refs/components/icons/icon_effects_outlined.svg
+  required_in_selector: .polish-panel-header img
+  fallback_allowed: false
+```
+
 Rules:
 - The HTML must reference the exact locked background filename. Do not swap to another background because it feels more suitable.
 - Every banner should use the locked banner pointer asset `figma-refs/components/pointer/pointer-arrow-default.png` directly as the topmost narrative pointer unless the user explicitly asks to omit it. Do not redraw it, rebuild it with CSS, add CSS shadow, or change its angle.
 - Every real-person avatar visible in the banner must use a locked `Avatar-image-*` SVG. Do not create CSS faces, gradient circles, initials, or random portraits.
 - If a visible product icon has a matching library asset, lock and use that exact SVG. Only abstract icons after classifying them as non-core or semantically generic.
 - Core feature icons and source-provided semantic icons must be treated as product evidence, not decorative detail. If Figma provides an icon node or the local icon library has a matching SVG, use that SVG path/file and list it in the Asset Lock Manifest. Do not approximate table, filter, AI input, voice, send, selected action, or primary field-type icons with CSS-drawn shapes.
+- Core semantic icons must be rendered with `data-icon-role` and the exact locked asset path, for example `<img data-icon-role="polish-panel-header-icon" src="../figma-refs/components/icons/icon_effects_outlined.svg" alt="">`. Do not use CSS-drawn fallback classes such as `.sparkle-icon`, `.star-icon`, `.magic-icon`, or `.css-icon` for locked icon roles.
 - If the provided Figma/source UI contains a visible image/cover/banner asset that remains visible in the abstracted product UI, lock and reuse that source image asset instead of approximating it with CSS gradients or another background. Store remote Figma assets locally before generating share HTML.
 
 For UI Detail Constraints, use `references/ui-foundation.md` as the baseline and add source-specific constraints from Figma: anchoring/gap, alignment, radius, selected state, padding grid, elevation scope, source fills/strokes, and protected triggers.
 
-**Step 5 — Write the planning brief**
+**Step 6 — Write the planning brief**
 
 Before coding, save the planning work to `output/<banner-name>.brief.md`. This brief is a required output artifact, not chat-only reasoning. It must contain these headings:
 
 ```text
+## User Choices
 ## Visual Strategy
 ## Source UI Audit
 ## Temporary Module Rule
@@ -265,7 +323,7 @@ Before coding, save the planning work to `output/<banner-name>.brief.md`. This b
 
 If no temporary module rule is needed, keep the heading and write `Not needed: <reason>`. Do not omit the section.
 
-**Step 6 — Load Module Rules and Templates**
+**Step 7 — Load Module Rules and Templates**
 
 Load only the module references needed by the audit.
 
@@ -273,7 +331,7 @@ Rules:
 - Do not ask the user which module file to read.
 - Infer modules from the source design/screenshot/Figma node.
 - If a module template exists, copy and adapt it instead of recreating from prose.
-- If no module rule/template exists, use the Temporary Module Rule from Step 3 and keep abstraction conservative.
+- If no module rule/template exists, use the Temporary Module Rule from Step 4 and keep abstraction conservative.
 
 Current module references:
 - Dashboard / 仪表盘: `references/modules/dashboard.md`
@@ -287,7 +345,7 @@ Current module references:
 - Dashboard donut/ring chart template: `assets/templates/dashboard/donut-chart-abstract.html`
 - Dashboard ranking list template: `assets/templates/dashboard/ranking-list-abstract.html`
 
-**Step 7 — Define key information and primary/secondary UI**
+**Step 8 — Define key information and primary/secondary UI**
 
 Based on the feature description, determine:
 - What is the core feature to highlight?
@@ -314,12 +372,17 @@ Primary UI scale rule:
 - If a complete-interface primary must overlap secondary UI, overlap or crop lower-priority secondary context before shrinking the primary result.
 - Add `/* ui-check min-size selector=.primary-selector min-width=400 */` to complete-interface primary surfaces.
 
+Source/context surface scale rule:
+- Do not over-compress a source product page when the banner still has unused space. If the source context is a PC form/questionnaire/table/app/workflow page and remains important to understanding the feature, it should usually occupy at least `58%` of banner width unless another primary surface truly needs the room.
+- Preserve source order and index for visible ordered content. Do not renumber questions, move the featured item from first to second, or reorder questions/rows/steps/menu items/ranked lists unless the source or user explicitly changes the order.
+- Compact floating panels such as add/type-picker/filter/action/config panels should preserve real target labels and be centered vertically when they fit. Do not skeletonize them completely.
+
 Product layer rule:
 - Order surfaces by product logic, not by which panel was drawn last. For paths such as `source UI -> menu/intermediate -> result UI`, the result UI is topmost, the menu/intermediate sits below it, and the source UI is lowest.
 - The primary result must not cover the key trigger that proves the path, such as the IM `+` button. If a larger primary result conflicts with the trigger, shrink/crop the secondary source UI first.
 - Add `z-index-above` to primary result surfaces and `rect-clearance` for protected triggers when overlap is likely.
 
-**Step 8 — Abstract product interfaces**
+**Step 9 — Abstract product interfaces**
 
 If the user provides a Figma URL, screenshot, or design file, inspect it first and treat it as the source of truth for product logic and geometry. Preserve the real component hierarchy, relative positions, spacing, icon choice, radius, line weight, and copy unless the abstraction rules explicitly say to crop or hide that detail.
 
@@ -329,7 +392,7 @@ Keep the core feature trigger and result fully visible. If foreground UI covers 
 
 For mobile source UI, remove system chrome such as status bars, dock bars, and OS indicators by default unless the feature depends on them or the user asks to preserve the literal full device frame. Keep product chrome such as nav bars when it helps identify context.
 
-**Step 9 — Banner layout**
+**Step 10 — Banner layout**
 
 Position the UI layers. See `references/design.md` → Composition System (Section 3), Layout Rules (Section 5), Cropping Grammar (Section 4).
 
@@ -343,9 +406,9 @@ All non-cropped edges should keep a `30px` to `50px` safe margin from the banner
 
 Primary floating panels should be visually centered first, especially vertically. Prefer `top: 50%` + `translateY(-50%)` when it preserves the non-cropped safe margin.
 
-**Step 10 — Choose background and refine UI details**
+**Step 11 — Apply chosen background and refine UI details**
 
-Select background by feature mood. See `references/design.md` → Background Asset System (Section 11-13), Background Mood Mapping.
+Use the background chosen in Step 2. If the user skipped the choice or explicitly asked you to choose, select background by feature mood. See `references/design.md` → Background Asset System (Section 11-13), Background Mood Mapping.
 
 Available backgrounds in `figma-refs/backgrounds/`: blue-soft-flow, dreamy-pink, elegant-purple, green-mist, green-spring.
 
@@ -374,7 +437,7 @@ Apply design tokens from `references/design.md`:
 
 Before final coding, run the anti-cliche filter from `references/visual-direction.md`. Remove decorative AI tropes, fake metrics, fake logos, filler icon clouds, and unnecessary cards.
 
-**Step 11 — Quality check and output files**
+**Step 12 — Quality check and output files**
 
 See Quality Checklist below.
 
@@ -438,7 +501,7 @@ For details that commonly drift, add `ui-check` comments before the relevant CSS
 
 ### Design System
 - `references/visual-direction.md` — **Taste and strategy layer (MUST read before new banners)**. Contains anti-AI visual cliches, compact visual-system guidance, composition strategy, variant planning, and the required Visual Strategy gate.
-- `references/ui-foundation.md` — **Baseline UI foundation (MUST read before generating)**. Contains alignment grids, secondary UI compression, approved abstraction assets, backing plate rules, menu/popover basics, form preview basics, and 20-40px edge safety.
+- `references/ui-foundation.md` — **Baseline UI foundation (MUST read before generating)**. Contains alignment grids, secondary UI compression, approved abstraction assets, backing plate rules, menu/popover basics, form preview basics, and 30-50px edge safety.
 - `references/design.md` — **Full design system (MUST read before generating)**. Contains: canvas specs, composition rules, cropping grammar, layout rules, flat UI system, abstraction rules (5 techniques + 3 levels + product logic), typography, radius, lines, shadows, backgrounds, icons, info hierarchy, color system, module abstraction guide (9 modules), common components (18 categories), banner composition pairings, reference examples.
 - `references/modules/dashboard.md` — Dashboard-specific abstraction rules. Read when a banner involves dashboard, metric cards, chart cards, pivot tables, or dashboard configuration.
 - `references/modules/im.md` — IM-specific rules. Read when a banner involves chat, bot messages, composer input, action menu, popover-triggered creation, or collection-form creation from IM.

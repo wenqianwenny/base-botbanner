@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 REQUIRED_SECTIONS = (
+    "User Choices",
     "Visual Strategy",
     "Source UI Audit",
     "Temporary Module Rule",

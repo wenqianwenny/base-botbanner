@@ -15,8 +15,16 @@ ATTR_RE = re.compile(
     r"<(?P<tag>img|image|source|link)\b[^>]*?\b(?P<attr>src|href)=(?P<quote>['\"])(?P<path>[^'\"]+)(?P=quote)[^>]*>",
     re.IGNORECASE | re.DOTALL,
 )
+TAG_RE = re.compile(r"<(?P<tag>img|svg|use)\b(?P<attrs>[^>]*)>", re.IGNORECASE | re.DOTALL)
+ATTR_PAIR_RE = re.compile(r"(?P<name>[\w:-]+)=(?P<quote>['\"])(?P<value>.*?)(?P=quote)", re.DOTALL)
 MANIFEST_SECTION_RE = re.compile(
     r"^##\s+Asset Lock Manifest\s*$"
+    r"(?P<body>.*?)"
+    r"(?=^##\s+|\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+ICON_MANIFEST_SECTION_RE = re.compile(
+    r"^##\s+Icon Lock Manifest\s*$"
     r"(?P<body>.*?)"
     r"(?=^##\s+|\Z)",
     re.MULTILINE | re.DOTALL,
@@ -26,6 +34,10 @@ LOCAL_ASSET_RE = re.compile(
     re.IGNORECASE,
 )
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+ICON_FALLBACK_RE = re.compile(
+    r"(?:css-icon|drawn-icon|sparkle-icon|star-icon|magic-icon|polish-star|custom-icon|fake-icon)",
+    re.IGNORECASE,
+)
 
 
 def is_image_ref(path_text: str) -> bool:
@@ -56,6 +68,10 @@ def normalize_manifest_path(path_text: str) -> str:
     return path_text
 
 
+def parse_attrs(attrs_text: str) -> dict[str, str]:
+    return {match.group("name").lower(): match.group("value") for match in ATTR_PAIR_RE.finditer(attrs_text)}
+
+
 def extract_manifest_paths(brief_path: Path) -> tuple[set[str], str]:
     if not brief_path.exists():
         raise FileNotFoundError(f"Brief file not found: {brief_path}")
@@ -69,6 +85,38 @@ def extract_manifest_paths(brief_path: Path) -> tuple[set[str], str]:
         for item in LOCAL_ASSET_RE.finditer(body)
     }
     return paths, body
+
+
+def parse_icon_manifest(brief_path: Path) -> tuple[dict[str, dict[str, str]], str]:
+    if not brief_path.exists():
+        raise FileNotFoundError(f"Brief file not found: {brief_path}")
+    markdown = brief_path.read_text(encoding="utf-8")
+    match = ICON_MANIFEST_SECTION_RE.search(markdown)
+    if not match:
+        return {}, ""
+    body = match.group("body")
+    roles: dict[str, dict[str, str]] = {}
+    current: dict[str, str] | None = None
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("- "):
+            if current and "role" in current:
+                roles[current["role"]] = current
+            current = {}
+            line = line[2:].strip()
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip().replace("-", "_")
+        value = value.strip().strip("`'\"")
+        if current is None:
+            current = {}
+        current[key] = normalize_manifest_path(value) if key == "asset" else value
+    if current and "role" in current:
+        roles[current["role"]] = current
+    return roles, body
 
 
 def extract_html_refs(html_path: Path, skill_root: Path) -> list[tuple[str, str, str]]:
@@ -88,6 +136,86 @@ def extract_html_refs(html_path: Path, skill_root: Path) -> list[tuple[str, str,
             refs.append((source, path_text, normalize_rel(path_text, html_path.parent, skill_root) if not is_external(path_text) and not path_text.startswith("data:") else path_text))
 
     return refs
+
+
+def extract_icon_role_refs(html_path: Path, skill_root: Path) -> list[dict[str, str]]:
+    html = html_path.read_text(encoding="utf-8")
+    refs: list[dict[str, str]] = []
+    for match in TAG_RE.finditer(html):
+        attrs = parse_attrs(match.group("attrs"))
+        role = attrs.get("data-icon-role")
+        if not role:
+            continue
+        raw_path = attrs.get("src") or attrs.get("href") or attrs.get("xlink:href") or attrs.get("data-asset") or ""
+        normalized = normalize_rel(raw_path, html_path.parent, skill_root) if raw_path and not raw_path.startswith("data:") and not is_external(raw_path) else raw_path
+        refs.append({
+            "role": role,
+            "tag": match.group("tag").lower(),
+            "path": raw_path,
+            "normalized": normalized,
+            "class": attrs.get("class", ""),
+        })
+    return refs
+
+
+def selector_is_plausible(ref: dict[str, str], selector: str) -> bool:
+    selector = selector.strip()
+    if not selector:
+        return True
+    tag = ref["tag"]
+    classes = {item for item in ref.get("class", "").split() if item}
+    selector_parts = selector.split()
+    last = selector_parts[-1] if selector_parts else selector
+    if last in {"img", "svg", "use"} and last != tag:
+        return False
+    class_names = re.findall(r"\.([A-Za-z0-9_-]+)", selector)
+    return not class_names or any(name in classes for name in class_names)
+
+
+def validate_icon_locks(html_path: Path, brief_path: Path, skill_root: Path, locked_paths: set[str]) -> list[str]:
+    icon_roles, _manifest_body = parse_icon_manifest(brief_path)
+    html = html_path.read_text(encoding="utf-8")
+    refs = extract_icon_role_refs(html_path, skill_root)
+    errors: list[str] = []
+
+    if not icon_roles:
+        if re.search(r"polish|润色|AI\s*polish", html, re.IGNORECASE):
+            errors.append("AI polish / 润色 banner needs a ## Icon Lock Manifest with polish icon roles.")
+        return errors
+
+    refs_by_role: dict[str, list[dict[str, str]]] = {}
+    for ref in refs:
+        refs_by_role.setdefault(ref["role"], []).append(ref)
+        if ref["role"] not in icon_roles:
+            errors.append(f"HTML uses data-icon-role={ref['role']!r} but the role is missing from Icon Lock Manifest.")
+
+    for role, spec in icon_roles.items():
+        asset = spec.get("asset")
+        if not asset:
+            errors.append(f"Icon role {role!r} is missing asset=... in Icon Lock Manifest.")
+            continue
+        if asset not in locked_paths:
+            errors.append(f"Icon role {role!r} asset is not listed in Asset Lock Manifest: {asset}")
+        if not (skill_root / asset).exists():
+            errors.append(f"Icon role {role!r} asset does not exist: {asset}")
+
+        role_refs = refs_by_role.get(role, [])
+        if not role_refs:
+            errors.append(f"Icon role {role!r} is required but no HTML element has data-icon-role={role!r}.")
+            continue
+
+        selector = spec.get("required_in_selector") or spec.get("selector") or ""
+        for ref in role_refs:
+            if ref["normalized"] != asset:
+                errors.append(f"Icon role {role!r} expected {asset}, found {ref['normalized'] or 'no asset src/data-asset'}.")
+            if selector and not selector_is_plausible(ref, selector):
+                errors.append(f"Icon role {role!r} does not plausibly match selector {selector!r}; tag={ref['tag']} class={ref.get('class', '')!r}.")
+
+        fallback_allowed = spec.get("fallback_allowed", "false").lower() in {"true", "yes", "1"}
+        if not fallback_allowed and ICON_FALLBACK_RE.search(html):
+            errors.append(f"Icon role {role!r} disallows fallback icons, but CSS/HTML contains a drawn icon fallback class such as css-icon/sparkle/star.")
+
+    return errors
 
 
 def validate(html_path: Path, brief_path: Path, skill_root: Path) -> list[str]:
@@ -122,6 +250,8 @@ def validate(html_path: Path, brief_path: Path, skill_root: Path) -> list[str]:
     for background in background_refs:
         if background not in locked_paths:
             errors.append(f"Background differs from Asset Lock Manifest: {background}")
+
+    errors.extend(validate_icon_locks(html_path, brief_path, skill_root, locked_paths))
 
     return errors
 

@@ -24,7 +24,7 @@ ANCHOR_RE = re.compile(
 )
 GENERIC_MARKER_RE = re.compile(
     r"/\*\s*ui-check\s+"
-    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text)\s+"
+    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|surface-count)\s+"
     r"(?P<params>.*?)\s*\*/",
     re.DOTALL,
 )
@@ -108,10 +108,21 @@ def class_name(selector: str | None) -> str | None:
     return match.group(1)
 
 
+def count_class_occurrences(html: str, class_value: str) -> int:
+    pattern = re.compile(r"class=[\"'][^\"']*\b" + re.escape(class_value) + r"\b[^\"']*[\"']", re.IGNORECASE)
+    return len(pattern.findall(html))
+
+
 def css_value_equal(actual: str | None, expected: str) -> bool:
     if actual is None:
         return False
     return " ".join(actual.lower().split()) == " ".join(expected.lower().split())
+
+
+def css_compact(value: str | None) -> str:
+    if value is None:
+        return ""
+    return re.sub(r"\s+", "", value.lower())
 
 
 def parse_marker_params(text: str) -> dict[str, str]:
@@ -385,7 +396,7 @@ def check_skeleton_color(blocks: dict[str, dict[str, str]], errors: list[str]) -
 
 def check_generic_markers(css: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     for kind, params in iter_generic_markers(css):
-        if kind in {"edge-safe", "cropped-edge", "parent-context", "anchored-to", "no-excess-blank", "group-centered", "balanced-content-inset", "allowed-text"}:
+        if kind in {"edge-safe", "cropped-edge", "parent-context", "anchored-to", "no-excess-blank", "group-centered", "balanced-content-inset", "allowed-text", "surface-count"}:
             continue
         selector = params.get("selector")
         if not selector:
@@ -447,6 +458,29 @@ def check_generic_markers(css: str, blocks: dict[str, dict[str, str]], errors: l
                 errors.append(f"ui-check max-size failed: {selector} width {width}, expected <= {max_width}")
             if max_height is not None and height is not None and height > max_height:
                 errors.append(f"ui-check max-size failed: {selector} height {height}, expected <= {max_height}")
+        elif kind == "radius":
+            expected = px_number(params.get("value"))
+            if expected is None:
+                errors.append(f"ui-check radius missing value=... for {selector}")
+                continue
+            radius = px_number(props.get("border-radius"))
+            if radius is None:
+                errors.append(f"ui-check radius failed: {selector} has no border-radius, expected {expected:g}px")
+            elif abs(radius - expected) > 0.5:
+                errors.append(f"ui-check radius failed: {selector} border-radius {radius:g}px, expected {expected:g}px")
+        elif kind == "outer-frame":
+            expected_padding = px_number(params.get("padding"))
+            if expected_padding is None:
+                errors.append(f"ui-check outer-frame missing padding=... for {selector}")
+            else:
+                padding = px_number(props.get("padding"))
+                if padding is None or abs(padding - expected_padding) > 0.5:
+                    errors.append(f"ui-check outer-frame failed: {selector} padding {padding}, expected {expected_padding:g}px")
+            expected_background = params.get("background")
+            if expected_background:
+                background = props.get("background")
+                if css_compact(expected_background) not in css_compact(background):
+                    errors.append(f"ui-check outer-frame failed: {selector} background {background!r}, expected to contain {expected_background!r}")
         elif kind == "z-index-above":
             above_selector = params.get("above")
             if not above_selector:
@@ -729,6 +763,20 @@ def check_allowed_text(params: dict[str, str], html: str, errors: list[str]) -> 
             errors.append(f"ui-check allowed-text failed: unexpected visible text {text!r}")
 
 
+def check_surface_count(params: dict[str, str], html: str, errors: list[str]) -> None:
+    item_class = params.get("item-class") or params.get("class")
+    if not item_class:
+        errors.append("ui-check surface-count needs item-class=...")
+        return
+    max_count = int(params.get("max", "0") or "0")
+    min_count = int(params.get("min", "0") or "0")
+    count = count_class_occurrences(html, item_class)
+    if max_count > 0 and count > max_count:
+        errors.append(f"ui-check surface-count failed: .{item_class} count {count}, expected <= {max_count}")
+    if min_count > 0 and count < min_count:
+        errors.append(f"ui-check surface-count failed: .{item_class} count {count}, expected >= {min_count}")
+
+
 def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     for kind, params in iter_generic_markers(css):
         if kind == "edge-safe":
@@ -747,6 +795,8 @@ def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]
             check_balanced_content_inset(params, blocks, errors)
         elif kind == "allowed-text":
             check_allowed_text(params, html, errors)
+        elif kind == "surface-count":
+            check_surface_count(params, html, errors)
 
 
 def count_repeated_items(html: str, container_class: str, item_class: str, exclude_class: str | None) -> int | None:

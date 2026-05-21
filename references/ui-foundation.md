@@ -79,7 +79,45 @@ Rules:
 - When detail competes with the main feature, remove detail before shrinking the primary feature.
 - A secondary UI may be cropped if the cropped side is not core to the feature path.
 
-## 2.1 Text Abstraction Budget
+## 2.1 Source Order And Evidence Priority
+
+Product order is product logic. Do not change it during abstraction.
+
+Rules:
+- Preserve source order and index for visible ordered content: question numbers, table rows, workflow steps, menu order, list ranking, timeline steps, and numbered configuration stages.
+- Do not move the feature item from first to second, reorder rows/steps, or renumber visible content to make the layout feel balanced.
+- The core feature evidence must not be visually demoted below sibling or background content. If one item is the feature, it should stay more readable, complete, or prominent than non-core siblings.
+- Sibling items may be skeletonized, cropped, or removed before the feature item is moved, renumbered, or visually downgraded.
+- If a source order must be changed because of an explicit user request, record that change in the brief.
+
+## 2.2 Compact Selection / Configuration Panels
+
+This applies to compact product panels used to choose, add, configure, or select something: add menus, type pickers, field pickers, filter builders, action menus, dropdowns, small configuration popovers, and similar controls.
+
+Role:
+- A compact panel is real product evidence when it contains the selected/target action or configuration.
+- If it is primary evidence for the feature, keep the target item label and key selected/configured values real.
+- Do not skeletonize the entire compact panel. A fully skeletonized picker/config panel loses the feature information.
+
+Information rules:
+- Keep the selected or target item real, such as a chosen type, field, action, status, assignee, or generated condition.
+- Keep 2-4 neighboring labels real only when they establish the panel type. Skeletonize or remove additional neighbors.
+- Preserve source icon style for the selected/target item if available; otherwise use a locked local icon asset. Only non-core neighboring icons may become neutral placeholders.
+
+Layout rules:
+- Preserve compact source scale. Do not inflate a picker/popover into a full page.
+- If the panel height is small enough to fit with safe margins, center it vertically in the banner or composition group. Do not leave excessive empty space below it.
+- Add `no-excess-blank` when the panel was resized or when visual review shows large bottom whitespace.
+
+Recommended checks:
+
+```css
+/* ui-check edge-safe selector=.compact-panel top-min=30 top-max=50 right-min=30 right-max=50 bottom-min=30 bottom-max=50 */
+/* ui-check no-excess-blank selector=.compact-panel content-selector=.compact-panel-content max-bottom-blank=24 */
+/* ui-check allowed-text values="<target label>|<key selected value>|..." */
+```
+
+## 2.3 Text Abstraction Budget
 
 Before coding, classify every visible text string:
 - **Core text**: necessary to understand the feature path. Keep real.
@@ -130,7 +168,25 @@ Backing plate rules:
 
 Do not add a backing plate to every small component. Use it for secondary product surfaces or grouped UI scenes that need separation from the background.
 
-## 4.1 Elevation Scope
+## 4.1 Secondary UI Outer Frame
+
+Large lower-layer product interfaces need a visible outside frame, not only a thin CSS border.
+
+Rules:
+- Build the frame as a wrapper around the product UI.
+- Frame thickness: `6px`, implemented as wrapper `padding: 6px`.
+- Frame color / opacity: `background: rgba(255, 255, 255, 0.5)`.
+- The product UI sits inside the wrapper; do not draw this as an inset border on the product UI itself.
+- Keep the full wrapper visible on non-cropped sides. Cropped sides may cut the wrapper intentionally.
+- Use a normal `1px solid rgba(255,255,255,0.72)` outline only for small flat panels or foreground separation, not for a large secondary/background interface.
+
+Recommended check:
+
+```css
+/* ui-check outer-frame selector=.secondary-frame padding=6 background="rgba(255, 255, 255, 0.5)" */
+```
+
+## 4.2 Elevation Scope
 
 Use shadow only to separate banner-level floating UI from the banner scene.
 
@@ -261,6 +317,8 @@ Supported markers:
 /* ui-check anchored-menu selector=.action-menu trigger-right=474 trigger-top=445 menu-width=180 menu-height=317 */
 /* ui-check min-size selector=.form-panel min-width=400 */
 /* ui-check max-size selector=.bubble max-width=320 */
+/* ui-check radius selector=.polish-panel value=12 */
+/* ui-check outer-frame selector=.secondary-frame padding=6 background="rgba(255, 255, 255, 0.5)" */
 /* ui-check z-index-above selector=.form-panel above=.action-menu */
 /* ui-check rect-clearance selector=.form-panel avoid-left=392 avoid-top=445 avoid-width=32 avoid-height=32 clearance=8 */
 /* ui-check max-repeat selector=.action-menu item-class=menu-row exclude-class=selected max=5 */
@@ -272,6 +330,7 @@ Supported markers:
 /* ui-check group-centered selectors=".phone-frame,.result-panel" axis=x center-x=450 tolerance=24 */
 /* ui-check balanced-content-inset container=.result-panel content=.focus-content align=left tolerance=4 */
 /* ui-check allowed-text values="客户跟进记录|客户手机号|150|1111|7615|继续" */
+/* ui-check surface-count item-class=ui-surface max=2 */
 ```
 
 Marker rules:
@@ -283,6 +342,8 @@ Marker rules:
 - Use `anchored-menu` only when wrapper anchoring is impossible; prefer CSS wrapper anchoring with `right: 0; bottom: calc(100% + 4px)`.
 - Use `min-size` on complete-interface primary surfaces.
 - Use `max-size` on secondary internal modules that must not touch their parent edge after the parent is cropped or narrowed.
+- Use `radius` on foreground floating panels, modal-like result panels, and any hand-coded panel whose source radius must not drift.
+- Use `outer-frame` on large secondary/background product UI wrappers so their visible frame stays `6px` and `rgba(255, 255, 255, 0.5)`.
 - Use `z-index-above` for product-logic layer order.
 - Use `rect-clearance` to protect key triggers/source fields from overlap.
 - Use `max-repeat` for repeated abstract-only lists and menus; cap at `5` by default.
@@ -295,6 +356,7 @@ Marker rules:
 - Use `group-centered` for single-interface or source-interface-plus-focus-card compositions. It checks the combined bounding box of the listed selectors against the banner center.
 - Use `balanced-content-inset` for important containers whose primary content must keep balanced visible spacing. `align=center` compares all four sides; `align=left` compares top/left/bottom; `align=right` compares top/right/bottom. Use `cropped=left,bottom` to exclude intentionally cropped edges.
 - Use `allowed-text` when source fidelity matters and the banner must not introduce new readable product states. List only source/user-approved visible text tokens; the script will flag unexpected readable text.
+- Use `surface-count` when a composition must remain one or two UI surfaces. Mark every major product surface with the same class, such as `ui-surface`, and cap the count, for example `item-class=ui-surface max=2`.
 
 ## 10. Banner Pointer
 
