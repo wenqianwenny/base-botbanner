@@ -8,6 +8,7 @@ import re
 import shlex
 import struct
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 
@@ -24,7 +25,7 @@ ANCHOR_RE = re.compile(
 )
 GENERIC_MARKER_RE = re.compile(
     r"/\*\s*ui-check\s+"
-    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|surface-count)\s+"
+    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|abstraction-consistency|surface-count)\s+"
     r"(?P<params>.*?)\s*\*/",
     re.DOTALL,
 )
@@ -810,6 +811,112 @@ def check_text_fit(params: dict[str, str], blocks: dict[str, dict[str, str]], er
         errors.append(f"ui-check text-fit failed: {selector} width {width:g}px, estimated required >= {required:g}px for {text!r}")
 
 
+class ClassItemParser(HTMLParser):
+    def __init__(self, container_class: str, item_class: str):
+        super().__init__()
+        self.container_class = container_class
+        self.item_class = item_class
+        self.container_depth = 0
+        self.item_depth = 0
+        self.current_item: dict[str, object] | None = None
+        self.items: list[dict[str, object]] = []
+
+    @staticmethod
+    def classes(attrs: list[tuple[str, str | None]]) -> set[str]:
+        for key, value in attrs:
+            if key == "class" and value:
+                return set(value.split())
+        return set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = self.classes(attrs)
+        if self.container_depth:
+            self.container_depth += 1
+        elif self.container_class in classes:
+            self.container_depth = 1
+
+        if not self.container_depth:
+            return
+
+        if self.item_depth:
+            self.item_depth += 1
+            if self.current_item is not None:
+                self.current_item["descendant_classes"].update(classes)  # type: ignore[union-attr]
+        elif self.item_class in classes:
+            self.item_depth = 1
+            self.current_item = {
+                "classes": classes,
+                "descendant_classes": set(classes),
+                "text": [],
+            }
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.item_depth:
+            self.item_depth -= 1
+            if self.item_depth == 0 and self.current_item is not None:
+                self.items.append(self.current_item)
+                self.current_item = None
+        if self.container_depth:
+            self.container_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self.item_depth and self.current_item is not None and data.strip():
+            self.current_item["text"].append(data.strip())  # type: ignore[union-attr]
+
+
+def class_items_in_container(html: str, container_class: str, item_class: str) -> list[dict[str, object]]:
+    parser = ClassItemParser(container_class, item_class)
+    parser.feed(html)
+    return parser.items
+
+
+def check_abstraction_consistency(params: dict[str, str], html: str, errors: list[str]) -> None:
+    selector = params.get("selector", "")
+    item_class = params.get("item-class")
+    if not selector.startswith(".") or not item_class:
+        errors.append("ui-check abstraction-consistency needs selector=.container and item-class=...")
+        return
+    container_class = selector[1:]
+    exclude_class = params.get("exclude-class")
+    skeleton_class = params.get("skeleton-class", "skeleton")
+    real_class = params.get("real-class")
+    mode = params.get("mode", "uniform")
+    items = class_items_in_container(html, container_class, item_class)
+    if not items:
+        errors.append(f"ui-check abstraction-consistency failed: no .{item_class} items found in {selector}")
+        return
+
+    states: list[str] = []
+    for item in items:
+        class_set = item["classes"]  # type: ignore[assignment]
+        descendant_classes = item["descendant_classes"]  # type: ignore[assignment]
+        if exclude_class and exclude_class in class_set:
+            continue
+        has_skeleton = skeleton_class in descendant_classes
+        has_real_class = bool(real_class and real_class in descendant_classes)
+        text = " ".join(item["text"])  # type: ignore[arg-type]
+        has_real_text = bool(text)
+        state = "real" if has_real_class or has_real_text else "skeleton" if has_skeleton else "empty"
+        states.append(state)
+
+    if not states:
+        return
+    if mode == "all-skeleton":
+        bad = [state for state in states if state != "skeleton"]
+        if bad:
+            errors.append(f"ui-check abstraction-consistency failed: {selector} non-excluded .{item_class} items must all be skeleton, got {states}")
+    elif mode == "all-real":
+        bad = [state for state in states if state != "real"]
+        if bad:
+            errors.append(f"ui-check abstraction-consistency failed: {selector} non-excluded .{item_class} items must all be real, got {states}")
+    elif mode == "uniform":
+        meaningful = [state for state in states if state != "empty"]
+        if "real" in meaningful and "skeleton" in meaningful:
+            errors.append(f"ui-check abstraction-consistency failed: {selector} mixes real and skeleton same-priority .{item_class} items: {states}")
+    else:
+        errors.append(f"ui-check abstraction-consistency unsupported mode={mode!r}")
+
+
 def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     for kind, params in iter_generic_markers(css):
         if kind == "edge-safe":
@@ -830,6 +937,8 @@ def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]
             check_allowed_text(params, html, errors)
         elif kind == "text-fit":
             check_text_fit(params, blocks, errors)
+        elif kind == "abstraction-consistency":
+            check_abstraction_consistency(params, html, errors)
         elif kind == "surface-count":
             check_surface_count(params, html, errors)
 

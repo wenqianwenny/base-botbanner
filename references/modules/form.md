@@ -38,6 +38,8 @@ Use the standard skeleton fill:
 background: rgba(15, 15, 16, 0.06);
 ```
 
+Same-priority form information must be treated consistently. If non-feature sibling questions, option labels, or type picker items are abstracted, abstract all same-priority siblings in that group; do not leave a few real labels mixed with skeleton labels unless those real labels are promoted to context evidence in the Abstraction Plan.
+
 ### Remove
 
 Remove information that creates noise or competes with the feature:
@@ -198,6 +200,7 @@ Recommended checks:
 /* ui-check no-excess-blank selector=.add-panel content-selector=.add-panel-content max-bottom-blank=24 */
 /* ui-check allowed-text values="电话号码|..." */
 /* ui-check text-fit selector=.selected-type text="电话号码" */
+/* ui-check abstraction-consistency selector=.type-grid item-class=type-item exclude-class=selected mode=all-skeleton skeleton-class=skeleton-line */
 ```
 
 ---

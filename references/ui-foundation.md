@@ -126,6 +126,15 @@ Before coding, classify every visible text string:
 - **Sibling menu/list labels**: skeletonize unless the item is selected or feature-relevant.
 - **Decorative/helper text**: remove or skeletonize.
 
+Same-priority information must use one abstraction treatment within the same page, panel, list, menu, grid, table, or form section.
+
+Rules:
+- Do not mix real readable labels and skeleton labels among items with the same priority.
+- If one non-core sibling in a group is skeletonized, all non-core siblings in that group should be skeletonized or removed.
+- If neighboring real labels are kept to explain a category, keep that whole same-priority group real; otherwise keep only the selected/target item real.
+- Selected, active, focused, or feature-relevant items are a higher priority and may stay real while same-priority non-selected siblings are uniformly abstracted.
+- Apply this to menus, type pickers, option rows, table columns, dashboard cards, sidebar entries, message lists, and repeated form questions.
+
 Examples:
 - In an IM creation menu focused on `收集表`, keep `收集表`; skeletonize other menu item labels.
 - In a form preview, keep `收集表`, `问答题`, `单选题`, and the main input placeholder if it explains the field. Skeletonize repeated option placeholder labels such as `请输入选项`.
@@ -351,6 +360,7 @@ Supported markers:
 /* ui-check balanced-content-inset container=.result-panel content=.focus-content align=left tolerance=4 */
 /* ui-check allowed-text values="客户跟进记录|客户手机号|150|1111|7615|继续" */
 /* ui-check text-fit selector=.selected-type text="电话号码" */
+/* ui-check abstraction-consistency selector=.type-grid item-class=type-item exclude-class=selected mode=all-skeleton skeleton-class=skeleton-line */
 /* ui-check surface-count item-class=ui-surface max=2 */
 ```
 
@@ -378,6 +388,7 @@ Marker rules:
 - Use `balanced-content-inset` for important containers whose primary content must keep balanced visible spacing. `align=center` compares all four sides; `align=left` compares top/left/bottom; `align=right` compares top/right/bottom. Use `cropped=left,bottom` to exclude intentionally cropped edges.
 - Use `allowed-text` when source fidelity matters and the banner must not introduce new readable product states. List only source/user-approved visible text tokens; the script will flag unexpected readable text.
 - Use `text-fit` for selected chips, buttons, tabs, menu items, option rows, and compact controls with real text. It checks that the selector has enough width for the declared text plus padding/icon space.
+- Use `abstraction-consistency` for menus, lists, grids, table columns, repeated cards, and form sections where same-priority items must not mix real text and skeleton text. Use `exclude-class=selected` or `exclude-class=core` for higher-priority target items.
 - Use `surface-count` when a composition must remain one or two UI surfaces. Mark every major product surface with the same class, such as `ui-surface`, and cap the count, for example `item-class=ui-surface max=2`.
 
 ## 10. Banner Pointer
