@@ -165,8 +165,9 @@ Rules:
 - A complete PC form page can be used as the main surface; crop or scale it so the question structure remains readable.
 - For a field-level feature, use source interface plus a magnified focus card derived from the same field.
 - Do not over-compress the form page when the banner still has unused space. Follow the global Source/Context Surface Scale rule: important PC source pages usually occupy at least `58%` of banner width. For questionnaire/form source pages, prefer `60%` to `72%` when it is the main source context. If the right side has more than `80px` of unused background and no primary surface needs that space, widen or shift the form source before adding empty background.
-- When the form page is the only large source surface, prefer cropping low-priority bottom/right content over shrinking the whole page into a narrow card.
+- When the form page is the left-side source/context surface, prefer cropping low-priority left and bottom content over shrinking the whole page into a narrow card. Crop right only when the right visual region is low priority or competes with the feature.
 - If the source has a right visual/image region and it remains visible, lock and reuse the source image asset instead of drawing a new gradient.
+- If the original Figma/source form contains a theme image or cover image and the banner keeps that visual region, use the actual source/Figma image asset. Do not replace it with a generic gradient, abstract blue strip, or unrelated background. If the asset cannot be downloaded, remove or crop the visual region rather than inventing it.
 - Do not keep a full `1440 × 900` page in miniature if it makes the key field unreadable; crop and simplify lower-priority regions first.
 - Right visual areas are mood/context, not the feature. They may be cropped, dimmed, or reduced if they compete with the form content.
 

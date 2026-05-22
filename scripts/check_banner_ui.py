@@ -25,7 +25,7 @@ ANCHOR_RE = re.compile(
 )
 GENERIC_MARKER_RE = re.compile(
     r"/\*\s*ui-check\s+"
-    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|abstraction-consistency|surface-count)\s+"
+    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|abstraction-consistency|pointer-target|surface-count)\s+"
     r"(?P<params>.*?)\s*\*/",
     re.DOTALL,
 )
@@ -91,6 +91,21 @@ def find_rule(blocks: dict[str, dict[str, str]], selector: str) -> dict[str, str
     return None
 
 
+def selector_contains_class(selector: str, class_value: str) -> bool:
+    return re.search(r"(?<![A-Za-z0-9_-])\." + re.escape(class_value) + r"(?![A-Za-z0-9_-])", selector) is not None
+
+
+def find_rule_by_class(blocks: dict[str, dict[str, str]], class_value: str) -> dict[str, str] | None:
+    direct = find_rule(blocks, f".{class_value}")
+    if direct:
+        return direct
+    for selector, props in blocks.items():
+        selectors = [normalize_selector(item) for item in selector.split(",")]
+        if any(selector_contains_class(item, class_value) for item in selectors):
+            return props
+    return None
+
+
 def px_number(value: str | None) -> float | None:
     if not value:
         return None
@@ -112,6 +127,10 @@ def class_name(selector: str | None) -> str | None:
 def count_class_occurrences(html: str, class_value: str) -> int:
     pattern = re.compile(r"class=[\"'][^\"']*\b" + re.escape(class_value) + r"\b[^\"']*[\"']", re.IGNORECASE)
     return len(pattern.findall(html))
+
+
+def has_class(html: str, class_value: str) -> bool:
+    return count_class_occurrences(html, class_value) > 0
 
 
 def css_value_equal(actual: str | None, expected: str) -> bool:
@@ -397,7 +416,7 @@ def check_skeleton_color(blocks: dict[str, dict[str, str]], errors: list[str]) -
 
 def check_generic_markers(css: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     for kind, params in iter_generic_markers(css):
-        if kind in {"edge-safe", "cropped-edge", "parent-context", "anchored-to", "no-excess-blank", "group-centered", "balanced-content-inset", "allowed-text", "surface-count"}:
+        if kind in {"edge-safe", "cropped-edge", "parent-context", "anchored-to", "no-excess-blank", "group-centered", "balanced-content-inset", "allowed-text", "text-fit", "abstraction-consistency", "pointer-target", "surface-count"}:
             continue
         selector = params.get("selector")
         if not selector:
@@ -778,6 +797,37 @@ def check_surface_count(params: dict[str, str], html: str, errors: list[str]) ->
         errors.append(f"ui-check surface-count failed: .{item_class} count {count}, expected >= {min_count}")
 
 
+def check_default_surface_contract(html: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
+    source = find_rule_by_class(blocks, "source-surface")
+    primary = find_rule_by_class(blocks, "primary-surface")
+    if source and primary:
+        source_z = px_number(source.get("z-index")) or 0
+        primary_z = px_number(primary.get("z-index")) or 0
+        if primary_z <= source_z:
+            errors.append(f".primary-surface must be above .source-surface: primary z-index {primary_z:g}, source z-index {source_z:g}")
+        source_rect = get_rect(source)
+        primary_rect = get_rect(primary)
+        if source_rect and primary_rect and rects_overlap(source_rect, primary_rect) and primary_z <= source_z:
+            errors.append(".primary-surface overlaps .source-surface but is not visually above it.")
+
+    left_context = find_rule_by_class(blocks, "left-context-source")
+    if left_context:
+        rect = get_rect(left_context)
+        if not rect:
+            errors.append(".left-context-source needs absolute left/top/width/height so crop can be checked.")
+        else:
+            left, top, width, height = rect
+            left_overflow = max(0.0, -left)
+            bottom_overflow = max(0.0, top + height - 500)
+            if left_overflow < 32:
+                errors.append(f".left-context-source must crop beyond left edge by at least 32px, got {left_overflow:g}px")
+            if bottom_overflow < 32:
+                errors.append(f".left-context-source must crop beyond bottom edge by at least 32px, got {bottom_overflow:g}px")
+
+    if has_class(html, "banner-pointer") and not has_class(html, "pointer-target"):
+        errors.append(".banner-pointer requires a .pointer-target on the key trigger/action/control.")
+
+
 def check_text_fit(params: dict[str, str], blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     selector = params.get("selector")
     text = params.get("text")
@@ -809,6 +859,27 @@ def check_text_fit(params: dict[str, str], blocks: dict[str, dict[str, str]], er
     required = estimated_text_width + icon + gap + padding_left + padding_right + 4
     if width < required:
         errors.append(f"ui-check text-fit failed: {selector} width {width:g}px, estimated required >= {required:g}px for {text!r}")
+
+
+def check_pointer_target(params: dict[str, str], blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
+    pointer_selector = params.get("pointer", ".banner-pointer")
+    target_selector = params.get("target", ".pointer-target")
+    pointer = get_selector_rect(blocks, pointer_selector)
+    target = get_selector_rect(blocks, target_selector)
+    if not pointer:
+        errors.append(f"ui-check pointer-target failed: cannot derive pointer rect for {pointer_selector}")
+        return
+    if not target:
+        errors.append(f"ui-check pointer-target failed: cannot derive target rect for {target_selector}")
+        return
+    px, py, pw, ph = pointer
+    tx, ty, tw, th = target
+    pointer_center = (px + pw / 2, py + ph / 2)
+    target_center = (tx + tw / 2, ty + th / 2)
+    distance = ((pointer_center[0] - target_center[0]) ** 2 + (pointer_center[1] - target_center[1]) ** 2) ** 0.5
+    max_distance = px_number(params.get("max-distance")) or 140
+    if distance > max_distance:
+        errors.append(f"ui-check pointer-target failed: {pointer_selector} is {distance:g}px from {target_selector}, expected <= {max_distance:g}px")
 
 
 class ClassItemParser(HTMLParser):
@@ -939,6 +1010,8 @@ def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]
             check_text_fit(params, blocks, errors)
         elif kind == "abstraction-consistency":
             check_abstraction_consistency(params, html, errors)
+        elif kind == "pointer-target":
+            check_pointer_target(params, blocks, errors)
         elif kind == "surface-count":
             check_surface_count(params, html, errors)
 
@@ -1213,6 +1286,7 @@ def run_checks(html_path: Path, png_path: Path | None) -> list[str]:
     check_shadow_scope(blocks, errors)
     check_im_modules(blocks, errors)
     check_skeleton_color(blocks, errors)
+    check_default_surface_contract(html, blocks, errors)
     check_generic_markers(css, blocks, errors)
     check_geometry_markers(css, html, blocks, errors)
     check_html_markers(css, html, errors)

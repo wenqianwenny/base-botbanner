@@ -240,10 +240,12 @@ If a panel feels too close to the edge:
 When a lower-priority source/context interface is placed on the left of a two-surface banner, it should usually feel larger than a contained card.
 
 Rules:
+- The left source/context interface must be marked with both `.source-surface` and `.left-context-source` so the checker can enforce the crop.
 - Prefer cropping the context surface at the left edge and bottom edge over shrinking it to fit fully inside the canvas.
 - Use this especially for PC form, questionnaire, table, dashboard, app, and workflow source pages.
 - Crop only low-priority chrome or repeated content. Do not crop the selected item, focused field, key trigger, or main result evidence.
 - If the context surface only needs to express the product body, remove unrelated navigation bars, sidebars, top toolbars, tabs, app switchers, and footer controls before scaling down the body.
+- A left source/context page showing a full rounded left corner inside the banner is a failure unless the user explicitly chose a no-crop layout.
 - Add a `cropped-edge` marker for the cropped surface, usually `side=left,bottom min-out=32`.
 - Add `edge-safe` only for non-cropped edges.
 
@@ -269,6 +271,8 @@ Layer by product logic:
 - Source/context UI is lowest.
 - Intermediate UI such as a menu/dropdown is above the source.
 - Result UI created by the action is topmost.
+- Required class names: `.source-surface` for the lower context interface, `.intermediate-surface` for menus/intermediate states, `.primary-surface` for the foreground result or main floating panel.
+- The checker treats `.primary-surface` below or visually covered by `.source-surface` as a hard failure.
 
 Do not let an intermediate menu appear above the final result unless the source product really keeps that menu open on top of the result. Do not let the primary result cover the key trigger/source element that proves the interaction path. If space is tight, shrink/crop secondary UI before shrinking a complete-interface primary surface.
 
@@ -404,6 +408,8 @@ Rules:
 - default size `90px × 90px`
 - use the complete PNG component directly; do not redraw, recolor, rebuild, add CSS shadow, or extract a sub-shape
 - place near the key trigger/action/control that advances the feature path
+- mark the intended target element with `.pointer-target`; if the arrow is not near `.pointer-target`, the output fails
+- for a selected button/chip such as `电话号码`, the pointer target is that selected chip/button, not an unrelated add/send/background control
 - use `scaleX(-1)` for horizontal flip; do not use a different arrow style
 - do not rotate by default; only rotate when explicitly requested or when the supplied Figma case already uses that exact rotation
 - do not cover product icons, readable text, selected values, or core controls
@@ -414,4 +420,5 @@ Use `z-index-above` when there is any risk of layering drift:
 
 ```css
 /* ui-check z-index-above selector=.banner-pointer above=.primary-panel */
+/* ui-check pointer-target pointer=.banner-pointer target=.pointer-target max-distance=140 */
 ```

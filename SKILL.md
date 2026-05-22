@@ -385,6 +385,8 @@ Source/context surface scale rule:
 
 Product layer rule:
 - Order surfaces by product logic, not by which panel was drawn last. For paths such as `source UI -> menu/intermediate -> result UI`, the result UI is topmost, the menu/intermediate sits below it, and the source UI is lowest.
+- Use required surface class names so the checker can enforce the layer order: foreground/result/floating panel uses `.primary-surface`; lower source/context interface uses `.source-surface`; optional intermediate menu uses `.intermediate-surface`.
+- If the primary surface overlaps the source surface, it must visually cover the source surface. A source/context UI covering the primary result is a hard failure.
 - The primary result must not cover the key trigger that proves the path, such as the IM `+` button. If a larger primary result conflicts with the trigger, shrink/crop the secondary source UI first.
 - Add `z-index-above` to primary result surfaces and `rect-clearance` for protected triggers when overlap is likely.
 
@@ -404,7 +406,7 @@ Position the UI layers. See `references/design.md` → Composition System (Secti
 
 Default to the fewest truthful surfaces. If there is one source interface and no separate real result/intermediate surface, use one centered or slightly offset product interface, optionally with a foreground focus card extracted from its key component. Use a two-surface composition when there are real source/result states or when a source page plus magnified component best explains a field-level feature. Use a tertiary UI only when it is a real middle step in the feature path, visually weaker than the primary UI, and simpler than both main layers.
 
-The secondary/background UI must be visibly cropped by default. Place it with negative left offset (`left: -48px` to `-96px`) so part of the UI extends beyond the banner's left edge. If its full left rounded corner is visible, it is not cropped enough. The safe margin applies only to non-cropped edges, not to the intentionally cropped side.
+The secondary/background UI must be visibly cropped by default. Place it with negative left offset (`left: -48px` to `-96px`) so part of the UI extends beyond the banner's left edge. If its full left rounded corner is visible, it is not cropped enough. The safe margin applies only to non-cropped edges, not to the intentionally cropped side. When this surface is the left-side context, add class `.left-context-source`; it must overflow the left and bottom canvas edges.
 
 Do not top-align the major UI surfaces. Keep a visible vertical stagger between primary and secondary UI: recommended top-edge difference 48-80px, minimum 32px. If the top edges differ by less than 24px, treat it as failed alignment and move one layer.
 
