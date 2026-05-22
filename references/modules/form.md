@@ -188,13 +188,16 @@ Layout rules:
 - The add panel is usually a compact floating panel. Preserve its compact source scale and do not inflate it into a full page.
 - If the panel height is small enough to fit with safe margins, center it vertically in the banner or in the composition group. Do not leave excessive empty space below it.
 - Add `no-excess-blank` when the panel was resized or when visual review shows large bottom whitespace.
+- For a single selected question type feature, keep the selected/target type label real and skeletonize or remove all non-target sibling labels by default. Do not keep a few neighboring labels real while skeletonizing the rest unless those neighboring labels are explicitly needed to explain the picker category.
+- The selected type chip/row must size to its content. Use the source width if it fits; otherwise increase width rather than letting the label overflow.
 
 Recommended checks:
 
 ```css
 /* ui-check edge-safe selector=.add-panel top-min=30 top-max=50 right-min=30 right-max=50 bottom-min=30 bottom-max=50 */
 /* ui-check no-excess-blank selector=.add-panel content-selector=.add-panel-content max-bottom-blank=24 */
-/* ui-check allowed-text values="电话号码|公式|查找引用|..." */
+/* ui-check allowed-text values="电话号码|..." */
+/* ui-check text-fit selector=.selected-type text="电话号码" */
 ```
 
 ---

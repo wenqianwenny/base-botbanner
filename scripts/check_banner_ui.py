@@ -24,7 +24,7 @@ ANCHOR_RE = re.compile(
 )
 GENERIC_MARKER_RE = re.compile(
     r"/\*\s*ui-check\s+"
-    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|surface-count)\s+"
+    r"(?P<kind>balanced-padding|no-shadow|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|surface-count)\s+"
     r"(?P<params>.*?)\s*\*/",
     re.DOTALL,
 )
@@ -777,6 +777,39 @@ def check_surface_count(params: dict[str, str], html: str, errors: list[str]) ->
         errors.append(f"ui-check surface-count failed: .{item_class} count {count}, expected >= {min_count}")
 
 
+def check_text_fit(params: dict[str, str], blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
+    selector = params.get("selector")
+    text = params.get("text")
+    if not selector or not text:
+        errors.append("ui-check text-fit needs selector=... and text=...")
+        return
+    props = find_rule(blocks, selector)
+    if not props:
+        errors.append(f"ui-check text-fit selector not found: {selector}")
+        return
+    width = px_number(props.get("width")) or px_number(props.get("min-width"))
+    if width is None:
+        errors.append(f"ui-check text-fit failed: {selector} needs width or min-width for text {text!r}")
+        return
+    font_size = px_number(props.get("font-size")) or px_number(params.get("font-size")) or 16
+    icon = px_number(params.get("icon")) or 0
+    gap = px_number(params.get("gap")) or (8 if icon else 0)
+    padding_left = px_number(params.get("padding-left"))
+    padding_right = px_number(params.get("padding-right"))
+    if padding_left is None or padding_right is None:
+        top, right, _bottom, left = padding_numbers(props.get("padding"))
+        padding_left = padding_left if padding_left is not None else left
+        padding_right = padding_right if padding_right is not None else right
+    # Conservative Chinese/product UI estimate: CJK characters are about 1em wide;
+    # latin/digits are narrower. Add a small tolerance so chips do not look tight.
+    cjk_count = sum(1 for char in text if ord(char) > 127)
+    latin_count = len(text) - cjk_count
+    estimated_text_width = cjk_count * font_size + latin_count * font_size * 0.58
+    required = estimated_text_width + icon + gap + padding_left + padding_right + 4
+    if width < required:
+        errors.append(f"ui-check text-fit failed: {selector} width {width:g}px, estimated required >= {required:g}px for {text!r}")
+
+
 def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     for kind, params in iter_generic_markers(css):
         if kind == "edge-safe":
@@ -795,6 +828,8 @@ def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]
             check_balanced_content_inset(params, blocks, errors)
         elif kind == "allowed-text":
             check_allowed_text(params, html, errors)
+        elif kind == "text-fit":
+            check_text_fit(params, blocks, errors)
         elif kind == "surface-count":
             check_surface_count(params, html, errors)
 

@@ -378,6 +378,8 @@ Primary UI scale rule:
 
 Source/context surface scale rule:
 - Do not over-compress a source product page when the banner still has unused space. If the source context is a PC form/questionnaire/table/app/workflow page and remains important to understanding the feature, it should usually occupy at least `58%` of banner width unless another primary surface truly needs the room.
+- When the source/context surface is placed on the left and is lower priority than a foreground panel, enlarge it and crop low-priority `left` and/or `bottom` edges before shrinking it into a safe card. Left-side source pages may extend beyond the banner left edge and bottom edge; non-cropped top/right edges still follow the safe-margin range.
+- If the source/context surface exists only to communicate a form/table/dashboard/workflow body, remove unrelated outer chrome such as side navigation, top navigation, toolbars, tabs, app switchers, and decorative visual regions before reducing the size of the core content. Keep outer chrome only when it is part of the feature path or needed to identify the module.
 - Preserve source order and index for visible ordered content. Do not renumber questions, move the featured item from first to second, or reorder questions/rows/steps/menu items/ranked lists unless the source or user explicitly changes the order.
 - Compact floating panels such as add/type-picker/filter/action/config panels should preserve real target labels and be centered vertically when they fit. Do not skeletonize them completely.
 

@@ -226,6 +226,23 @@ If a panel feels too close to the edge:
 4. Shrink the surface if content no longer needs the old size.
 5. Only then reduce the non-cropped margin, never below the required minimum.
 
+## 5.0 Left Context Crop Pattern
+
+When a lower-priority source/context interface is placed on the left of a two-surface banner, it should usually feel larger than a contained card.
+
+Rules:
+- Prefer cropping the context surface at the left edge and bottom edge over shrinking it to fit fully inside the canvas.
+- Use this especially for PC form, questionnaire, table, dashboard, app, and workflow source pages.
+- Crop only low-priority chrome or repeated content. Do not crop the selected item, focused field, key trigger, or main result evidence.
+- If the context surface only needs to express the product body, remove unrelated navigation bars, sidebars, top toolbars, tabs, app switchers, and footer controls before scaling down the body.
+- Add a `cropped-edge` marker for the cropped surface, usually `side=left,bottom min-out=32`.
+- Add `edge-safe` only for non-cropped edges.
+
+```css
+/* ui-check cropped-edge selector=.source-surface side=left,bottom min-out=32 */
+/* ui-check edge-safe selector=.source-surface top-min=30 top-max=50 right-min=30 right-max=50 */
+```
+
 ## 5.1 Primary Surface Scale
 
 Classify the primary result surface before sizing it.
@@ -277,6 +294,9 @@ Rules:
 - Text starts at a stable x position, usually `40px` from row left for menu rows with icons.
 - Selected row keeps source highlight and check/active indicator when it explains the feature.
 - If only one menu item is the feature evidence, keep that item real and skeletonize non-selected sibling labels.
+- Keep sibling abstraction consistent inside one menu/list/grid group. Do not mix real readable labels and skeleton labels among non-target siblings. Either keep all siblings in the same semantic group real because their labels are needed, or skeletonize/remove all non-target sibling labels.
+- When the feature is a single selected type/action/value, default to keeping only the selected/target label real; all other sibling labels become skeleton lines or are removed.
+- Selected labels must fit their selected chip/row. Do not use a fixed width that clips or lets text overflow; size the selected item from icon slot + label + horizontal padding, or add a `text-fit` marker.
 - Move trigger + menu together if the exact anchor would clip important information.
 
 ## 7. Form Preview Basics
@@ -330,6 +350,7 @@ Supported markers:
 /* ui-check group-centered selectors=".phone-frame,.result-panel" axis=x center-x=450 tolerance=24 */
 /* ui-check balanced-content-inset container=.result-panel content=.focus-content align=left tolerance=4 */
 /* ui-check allowed-text values="客户跟进记录|客户手机号|150|1111|7615|继续" */
+/* ui-check text-fit selector=.selected-type text="电话号码" */
 /* ui-check surface-count item-class=ui-surface max=2 */
 ```
 
@@ -356,6 +377,7 @@ Marker rules:
 - Use `group-centered` for single-interface or source-interface-plus-focus-card compositions. It checks the combined bounding box of the listed selectors against the banner center.
 - Use `balanced-content-inset` for important containers whose primary content must keep balanced visible spacing. `align=center` compares all four sides; `align=left` compares top/left/bottom; `align=right` compares top/right/bottom. Use `cropped=left,bottom` to exclude intentionally cropped edges.
 - Use `allowed-text` when source fidelity matters and the banner must not introduce new readable product states. List only source/user-approved visible text tokens; the script will flag unexpected readable text.
+- Use `text-fit` for selected chips, buttons, tabs, menu items, option rows, and compact controls with real text. It checks that the selector has enough width for the declared text plus padding/icon space.
 - Use `surface-count` when a composition must remain one or two UI surfaces. Mark every major product surface with the same class, such as `ui-surface`, and cap the count, for example `item-class=ui-surface max=2`.
 
 ## 10. Banner Pointer
