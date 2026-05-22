@@ -89,7 +89,9 @@ Generate 900×500px HTML/CSS banners for Lark Base feature announcements.
 
 **Step 2 — User Choice Gate**
 
-For every new banner request, ask these choices before implementation unless the user has already specified them in the prompt. Do not start drawing before this gate is resolved.
+For every new banner request, resolve these choices before implementation unless the user has already specified them in the prompt. This is a hard stop.
+
+If any choice is missing, ask only the missing choice(s) and stop. Do not output Visual Strategy, Source UI Audit, Temporary Module Rule, Abstraction Plan, UI Detail Constraints, Asset Lock Manifest, brief files, HTML, share HTML, or PNG until the user answers.
 
 ```text
 Before I generate, please choose:
@@ -111,8 +113,10 @@ Before I generate, please choose:
 ```
 
 Rules:
-- If the user already specifies a background, layout side, or abstraction mode, record it and do not ask that item again.
-- If the user explicitly asks to proceed without questions, choose defaults and record them in the brief: background by feature mood, Primary UI right, and lightly abstract only non-core primary details.
+- If the user already specifies a background, layout side, or abstraction mode, record it and ask only the missing item(s).
+- Do not infer defaults just because the prompt is detailed or says to follow the skill workflow.
+- Defaults are allowed only when the user explicitly says to proceed without questions, use defaults, or directly generate. Then record the defaults in the brief: background by feature mood, Primary UI right, and lightly abstract only non-core primary details.
+- If this gate is skipped, the banner workflow fails even if the generated brief later contains a User Choices section.
 - The abstraction choice applies to the Primary UI only. Secondary/source UI still follows normal abstraction rules.
 - "Preserve primary UI details" means keep real labels, source order, source states, icon choices, and component structure for the primary surface. Low-priority surrounding content may still be removed if it is outside the primary surface or violates safe margins.
 - "Lightly abstract the primary UI" means keep the target/selected result real while skeletonizing low-priority sibling details.

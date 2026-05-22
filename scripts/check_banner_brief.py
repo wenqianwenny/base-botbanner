@@ -62,6 +62,18 @@ def validate(path: Path) -> list[str]:
     if verification and "check_banner_brief.py" not in verification:
         errors.append("Verification must mention check_banner_brief.py.")
 
+    user_choices = sections.get(normalize_heading("User Choices"), "")
+    if user_choices:
+        required_choice_fields = (
+            "Background",
+            "Layout direction",
+            "Primary UI abstraction",
+            "Defaults used",
+        )
+        for field in required_choice_fields:
+            if not re.search(rf"^\s*-\s*{re.escape(field)}\s*[:：]\s*\S+", user_choices, re.MULTILINE):
+                errors.append(f"User Choices must include a non-empty '- {field}:' entry.")
+
     return errors
 
 
