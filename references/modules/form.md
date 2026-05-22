@@ -168,6 +168,7 @@ Rules:
 - When the form page is the left-side source/context surface, prefer cropping low-priority left and bottom content over shrinking the whole page into a narrow card. Crop right only when the right visual region is low priority or competes with the feature.
 - If the source has a right visual/image region and it remains visible, lock and reuse the source image asset instead of drawing a new gradient.
 - If the original Figma/source form contains a theme image or cover image and the banner keeps that visual region, use the actual source/Figma image asset. Do not replace it with a generic gradient, abstract blue strip, or unrelated background. If the asset cannot be downloaded, remove or crop the visual region rather than inventing it.
+- Form theme images kept in the banner must be rendered as `<img data-source-image-role="form-theme-image">` and listed in the Asset Lock Manifest with `fallback_allowed: false`.
 - Do not keep a full `1440 × 900` page in miniature if it makes the key field unreadable; crop and simplify lower-priority regions first.
 - Right visual areas are mood/context, not the feature. They may be cropped, dimmed, or reduced if they compete with the form content.
 

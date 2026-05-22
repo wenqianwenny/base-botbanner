@@ -194,6 +194,7 @@ If the source UI contains form / questionnaire / 问卷 / 收集表 / 填写页 
 - Keep the form title, current feature field, and field structure readable
 - Skeletonize low-priority subtitle, sibling option labels, repeated placeholders, and non-core question content
 - Remove top operation bars, invisible editing affordances, extra questions, and unrelated media when they do not explain the feature path
+- If a visual/image region remains visible, identify whether it is a real Figma/source image asset. If yes, download and lock that exact asset before coding; do not substitute a CSS gradient, generated image, background asset, or unrelated local image.
 
 If the source UI contains table / grid view / data table / 数据表 / 表格视图 / records / fields / rows:
 - Automatically read `references/modules/table.md`
@@ -274,6 +275,24 @@ Asset Lock Manifest:
 - Assets intentionally abstracted:
 ```
 
+For every visible source/Figma image asset kept inside a product UI, add a role entry under the same Asset Lock Manifest:
+
+```text
+- role: form-theme-image
+  asset: output/assets/<banner-name>/form-theme-image.png
+  source: Figma node / source UI region description
+  selector: .form-theme-image
+  fallback_allowed: false
+```
+
+Render it as an actual image element with the matching role:
+
+```html
+<img class="form-theme-image" data-source-image-role="form-theme-image" src="assets/<banner-name>/form-theme-image.png" alt="">
+```
+
+If the source image cannot be downloaded, remove or crop that image region. Do not approximate it with CSS gradients, background assets, or generic abstract images.
+
 When a core semantic icon is visible, also write an Icon Lock Manifest:
 
 ```text
@@ -296,6 +315,7 @@ Rules:
 - Core feature icons and source-provided semantic icons must be treated as product evidence, not decorative detail. If Figma provides an icon node or the local icon library has a matching SVG, use that SVG path/file and list it in the Asset Lock Manifest. Do not approximate table, filter, AI input, voice, send, selected action, or primary field-type icons with CSS-drawn shapes.
 - Core semantic icons must be rendered with `data-icon-role` and the exact locked asset path, for example `<img data-icon-role="polish-panel-header-icon" src="../figma-refs/components/icons/icon_effects_outlined.svg" alt="">`. Do not use CSS-drawn fallback classes such as `.sparkle-icon`, `.star-icon`, `.magic-icon`, or `.css-icon` for locked icon roles.
 - If the provided Figma/source UI contains a visible image/cover/banner asset that remains visible in the abstracted product UI, lock and reuse that source image asset instead of approximating it with CSS gradients or another background. Store remote Figma assets locally before generating share HTML.
+- Source/Figma image assets that remain visible must be downloaded into `output/assets/<banner-name>/` or reused from `figma-refs/components/image/`, listed in the Asset Lock Manifest with a `role`, and rendered with `data-source-image-role`. CSS gradients are allowed for the overall banner background only, not for source product image regions.
 
 For UI Detail Constraints, use `references/ui-foundation.md` as the baseline and add source-specific constraints from Figma: anchoring/gap, alignment, radius, selected state, padding grid, elevation scope, source fills/strokes, and protected triggers.
 

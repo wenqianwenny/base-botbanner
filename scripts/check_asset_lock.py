@@ -16,7 +16,10 @@ ATTR_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 TAG_RE = re.compile(r"<(?P<tag>img|svg|use)\b(?P<attrs>[^>]*)>", re.IGNORECASE | re.DOTALL)
+ANY_TAG_RE = re.compile(r"<(?P<tag>\w+)\b(?P<attrs>[^>]*)>", re.IGNORECASE | re.DOTALL)
 ATTR_PAIR_RE = re.compile(r"(?P<name>[\w:-]+)=(?P<quote>['\"])(?P<value>.*?)(?P=quote)", re.DOTALL)
+STYLE_RE = re.compile(r"<style[^>]*>(.*?)</style>", re.DOTALL | re.IGNORECASE)
+CSS_BLOCK_RE = re.compile(r"(?P<selector>[^{}]+)\{(?P<body>[^{}]*)\}", re.DOTALL)
 MANIFEST_SECTION_RE = re.compile(
     r"^##\s+Asset Lock Manifest\s*$"
     r"(?P<body>.*?)"
@@ -36,6 +39,10 @@ LOCAL_ASSET_RE = re.compile(
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
 ICON_FALLBACK_RE = re.compile(
     r"(?:css-icon|drawn-icon|sparkle-icon|star-icon|magic-icon|polish-star|custom-icon|fake-icon)",
+    re.IGNORECASE,
+)
+SOURCE_IMAGE_CLASS_RE = re.compile(
+    r"(?:figma-image|theme|cover|hero|visual|right-visual|form-visual|theme-image|cover-image|source-image)",
     re.IGNORECASE,
 )
 
@@ -119,6 +126,37 @@ def parse_icon_manifest(brief_path: Path) -> tuple[dict[str, dict[str, str]], st
     return roles, body
 
 
+def parse_source_image_locks(manifest_body: str) -> dict[str, dict[str, str]]:
+    roles: dict[str, dict[str, str]] = {}
+    current: dict[str, str] | None = None
+    in_source_context = False
+    for raw_line in manifest_body.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if re.match(r"^-\s*Source UI image assets\s*:", line, re.IGNORECASE):
+            in_source_context = True
+        if line.startswith("- "):
+            if current and "role" in current:
+                roles[current["role"]] = current
+            current = {}
+            line = line[2:].strip()
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip().replace("-", "_")
+        value = value.strip().strip("`'\"")
+        if key == "role":
+            in_source_context = True
+        if current is None:
+            current = {}
+        if in_source_context:
+            current[key] = normalize_manifest_path(value) if key == "asset" else value
+    if current and "role" in current:
+        roles[current["role"]] = current
+    return roles
+
+
 def extract_html_refs(html_path: Path, skill_root: Path) -> list[tuple[str, str, str]]:
     html = html_path.read_text(encoding="utf-8")
     refs: list[tuple[str, str, str]] = []
@@ -156,6 +194,31 @@ def extract_icon_role_refs(html_path: Path, skill_root: Path) -> list[dict[str, 
             "class": attrs.get("class", ""),
         })
     return refs
+
+
+def extract_source_image_refs(html_path: Path, skill_root: Path) -> list[dict[str, str]]:
+    html = html_path.read_text(encoding="utf-8")
+    refs: list[dict[str, str]] = []
+    for match in ANY_TAG_RE.finditer(html):
+        attrs = parse_attrs(match.group("attrs"))
+        role = attrs.get("data-source-image-role")
+        if not role:
+            continue
+        raw_path = attrs.get("src") or attrs.get("href") or attrs.get("data-asset") or ""
+        normalized = normalize_rel(raw_path, html_path.parent, skill_root) if raw_path and not raw_path.startswith("data:") and not is_external(raw_path) else raw_path
+        refs.append({
+            "role": role,
+            "tag": match.group("tag").lower(),
+            "path": raw_path,
+            "normalized": normalized,
+            "class": attrs.get("class", ""),
+        })
+    return refs
+
+
+def extract_css(html_path: Path) -> str:
+    html = html_path.read_text(encoding="utf-8")
+    return "\n".join(match.group(1) for match in STYLE_RE.finditer(html))
 
 
 def selector_is_plausible(ref: dict[str, str], selector: str) -> bool:
@@ -218,6 +281,56 @@ def validate_icon_locks(html_path: Path, brief_path: Path, skill_root: Path, loc
     return errors
 
 
+def validate_source_image_locks(html_path: Path, manifest_body: str, skill_root: Path, locked_paths: set[str]) -> list[str]:
+    html = html_path.read_text(encoding="utf-8")
+    css = extract_css(html_path)
+    source_roles = parse_source_image_locks(manifest_body)
+    refs = extract_source_image_refs(html_path, skill_root)
+    errors: list[str] = []
+
+    refs_by_role: dict[str, list[dict[str, str]]] = {}
+    for ref in refs:
+        refs_by_role.setdefault(ref["role"], []).append(ref)
+        if ref["role"] not in source_roles:
+            errors.append(f"HTML uses data-source-image-role={ref['role']!r} but the role is missing from Asset Lock Manifest.")
+        if ref["tag"] not in {"img", "image", "source"}:
+            errors.append(f"Source image role {ref['role']!r} must be rendered as an image element, got <{ref['tag']}>.")
+
+    for role, spec in source_roles.items():
+        asset = spec.get("asset")
+        if not asset:
+            errors.append(f"Source image role {role!r} is missing asset=... in Asset Lock Manifest.")
+            continue
+        if asset not in locked_paths:
+            errors.append(f"Source image role {role!r} asset is not listed as a locked local asset: {asset}")
+        if not (skill_root / asset).exists():
+            errors.append(f"Source image role {role!r} asset does not exist: {asset}")
+
+        role_refs = refs_by_role.get(role, [])
+        if not role_refs:
+            errors.append(f"Source image role {role!r} is locked but no HTML element has data-source-image-role={role!r}.")
+        for ref in role_refs:
+            if ref["normalized"] != asset:
+                errors.append(f"Source image role {role!r} expected {asset}, found {ref['normalized'] or 'no asset src/data-asset'}.")
+
+        fallback_allowed = spec.get("fallback_allowed", "false").lower() in {"true", "yes", "1"}
+        if not fallback_allowed and re.search(rf"{re.escape(role)}[^{{}}]*linear-gradient|linear-gradient[^{{}}]*{re.escape(role)}", css, re.IGNORECASE):
+            errors.append(f"Source image role {role!r} disallows CSS gradient fallback.")
+
+    if SOURCE_IMAGE_CLASS_RE.search(html) and not refs:
+        class_refs = re.findall(r"class=['\"]([^'\"]*(?:figma-image|theme|cover|hero|visual|source-image)[^'\"]*)['\"]", html, flags=re.IGNORECASE)
+        if class_refs:
+            errors.append("HTML appears to contain source/theme/cover/visual image regions but no data-source-image-role locked image element.")
+
+    for match in CSS_BLOCK_RE.finditer(css):
+        selector = match.group("selector")
+        body = match.group("body")
+        if SOURCE_IMAGE_CLASS_RE.search(selector) and "linear-gradient" in body.lower():
+            errors.append(f"Source image-like selector uses CSS gradient instead of a locked image asset: {selector.strip()}")
+
+    return errors
+
+
 def validate(html_path: Path, brief_path: Path, skill_root: Path) -> list[str]:
     locked_paths, manifest_body = extract_manifest_paths(brief_path)
     refs = extract_html_refs(html_path, skill_root)
@@ -252,6 +365,7 @@ def validate(html_path: Path, brief_path: Path, skill_root: Path) -> list[str]:
             errors.append(f"Background differs from Asset Lock Manifest: {background}")
 
     errors.extend(validate_icon_locks(html_path, brief_path, skill_root, locked_paths))
+    errors.extend(validate_source_image_locks(html_path, manifest_body, skill_root, locked_paths))
 
     return errors
 
