@@ -2,7 +2,7 @@
 
 Use this file before composing any Base bot banner. It is the taste layer above the implementation rules in `design.md` and the module templates.
 
-Before writing a Visual Strategy for a new banner, resolve the User Choice Gate from `SKILL.md`: background, primary-side layout direction, and primary UI abstraction mode. This is a hard stop. If the user has not provided all three choices, ask only for the missing choices and do not continue to strategy, audit, planning, or generation until the user answers. The chosen options constrain the strategy; do not override them based on mood unless the user explicitly asks you to choose or use defaults.
+Before writing a Visual Strategy for a new banner, resolve the User Choice Gate from `SKILL.md`: background only. This is a hard stop. If the user has not provided a background, ask only for the background and do not continue to strategy, audit, planning, or generation until the user answers. Layout and abstraction use defaults: secondary/source/lower UI on the left, primary/result/floating UI on the right; all product UI is abstracted unless the user explicitly names a module or surface that should not be abstracted.
 
 ## Core Goal
 

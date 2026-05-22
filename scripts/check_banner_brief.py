@@ -66,8 +66,8 @@ def validate(path: Path) -> list[str]:
     if user_choices:
         required_choice_fields = (
             "Background",
-            "Layout direction",
-            "Primary UI abstraction",
+            "Layout default",
+            "Abstraction default",
             "Defaults used",
         )
         for field in required_choice_fields:

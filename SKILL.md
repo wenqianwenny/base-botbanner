@@ -62,7 +62,7 @@ Generate 900×500px HTML/CSS banners for Lark Base feature announcements.
 ```
 1. Receive feature description + product UI screenshot
        ↓
-2. User Choice Gate — ask for background, primary-side layout, and primary UI abstraction mode unless already specified
+2. User Choice Gate — ask for background only unless already specified
        ↓
 3. Visual Strategy — define the product story, taste constraints, and composition direction
        ↓
@@ -89,45 +89,35 @@ Generate 900×500px HTML/CSS banners for Lark Base feature announcements.
 
 **Step 2 — User Choice Gate**
 
-For every new banner request, resolve these choices before implementation unless the user has already specified them in the prompt. This is a hard stop.
+For every new banner request, resolve the background choice before implementation unless the user has already specified it in the prompt. This is a hard stop.
 
-If any choice is missing, ask only the missing choice(s) and stop. Do not output Visual Strategy, Source UI Audit, Temporary Module Rule, Abstraction Plan, UI Detail Constraints, Asset Lock Manifest, brief files, HTML, share HTML, or PNG until the user answers.
+If the background choice is missing, ask only for the background and stop. Do not output Visual Strategy, Source UI Audit, Temporary Module Rule, Abstraction Plan, UI Detail Constraints, Asset Lock Manifest, brief files, HTML, share HTML, or PNG until the user answers.
 
 ```text
-Before I generate, please choose:
+Before I generate, please choose a background:
 
-1. Background
 - green-mist
 - green-spring
 - dreamy-pink
 - blue-soft-flow
 - elegant-purple
-
-2. Layout direction
-- Primary UI on the right, secondary/source UI on the left
-- Primary UI on the left, secondary/source UI on the right
-
-3. Primary UI abstraction
-- Preserve primary UI details / do not abstract the primary UI
-- Lightly abstract the primary UI
 ```
 
 Rules:
-- If the user already specifies a background, layout side, or abstraction mode, record it and ask only the missing item(s).
-- Do not infer defaults just because the prompt is detailed or says to follow the skill workflow.
-- Defaults are allowed only when the user explicitly says to proceed without questions, use defaults, or directly generate. Then record the defaults in the brief: background by feature mood, Primary UI right, and lightly abstract only non-core primary details.
+- If the user already specifies a background, record it and do not ask again.
+- Do not ask the user to choose layout direction or abstraction mode.
+- Default layout: secondary/source/lower UI on the left, primary/result/floating UI on the right. Use the reverse layout only when the user explicitly requests it or the source geometry makes the default impossible.
+- Default abstraction: abstract all product UI by default. Preserve a module or surface unabstracted only when the user explicitly says that module/surface should not be abstracted.
+- If the user explicitly asks to proceed without questions, use a background by feature mood and record that default.
 - If this gate is skipped, the banner workflow fails even if the generated brief later contains a User Choices section.
-- The abstraction choice applies to the Primary UI only. Secondary/source UI still follows normal abstraction rules.
-- "Preserve primary UI details" means keep real labels, source order, source states, icon choices, and component structure for the primary surface. Low-priority surrounding content may still be removed if it is outside the primary surface or violates safe margins.
-- "Lightly abstract the primary UI" means keep the target/selected result real while skeletonizing low-priority sibling details.
 
 Write the resolved choices into the brief:
 
 ```text
 User Choices:
 - Background:
-- Layout direction:
-- Primary UI abstraction:
+- Layout default:
+- Abstraction default:
 - Defaults used:
 ```
 
