@@ -240,7 +240,8 @@ If a panel feels too close to the edge:
 When a lower-priority source/context interface is placed on the left of a two-surface banner, it should usually feel larger than a contained card.
 
 Rules:
-- The left source/context interface must be marked with both `.source-surface` and `.left-context-source` so the checker can enforce the crop.
+- Mark the lower context interface with `.source-surface`; add `.left-context-source` when you already know it is the left-side context.
+- Even if `.left-context-source` is missing, the checker treats `.source-surface` as a left context automatically when it is positioned left of `.primary-surface`.
 - Prefer cropping the context surface at the left edge and bottom edge over shrinking it to fit fully inside the canvas.
 - Use this especially for PC form, questionnaire, table, dashboard, app, and workflow source pages.
 - Crop only low-priority chrome or repeated content. Do not crop the selected item, focused field, key trigger, or main result evidence.

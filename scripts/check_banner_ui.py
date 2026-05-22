@@ -800,6 +800,8 @@ def check_surface_count(params: dict[str, str], html: str, errors: list[str]) ->
 def check_default_surface_contract(html: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     source = find_rule_by_class(blocks, "source-surface")
     primary = find_rule_by_class(blocks, "primary-surface")
+    source_rect = None
+    primary_rect = None
     if source and primary:
         source_z = px_number(source.get("z-index")) or 0
         primary_z = px_number(primary.get("z-index")) or 0
@@ -811,18 +813,35 @@ def check_default_surface_contract(html: str, blocks: dict[str, dict[str, str]],
             errors.append(".primary-surface overlaps .source-surface but is not visually above it.")
 
     left_context = find_rule_by_class(blocks, "left-context-source")
+    inferred_left_context = False
     if left_context:
         rect = get_rect(left_context)
+        context_label = ".left-context-source"
+    elif source and primary and source_rect and primary_rect:
+        source_center_x = source_rect[0] + source_rect[2] / 2
+        primary_center_x = primary_rect[0] + primary_rect[2] / 2
+        if source_center_x < primary_center_x:
+            rect = source_rect
+            context_label = ".source-surface inferred as left context"
+            inferred_left_context = True
+        else:
+            rect = None
+            context_label = ".source-surface"
+    else:
+        rect = None
+        context_label = ".left-context-source"
+
+    if left_context or inferred_left_context:
         if not rect:
-            errors.append(".left-context-source needs absolute left/top/width/height so crop can be checked.")
+            errors.append(f"{context_label} needs absolute left/top/width/height so crop can be checked.")
         else:
             left, top, width, height = rect
             left_overflow = max(0.0, -left)
             bottom_overflow = max(0.0, top + height - 500)
             if left_overflow < 32:
-                errors.append(f".left-context-source must crop beyond left edge by at least 32px, got {left_overflow:g}px")
+                errors.append(f"{context_label} must crop beyond left edge by at least 32px, got {left_overflow:g}px")
             if bottom_overflow < 32:
-                errors.append(f".left-context-source must crop beyond bottom edge by at least 32px, got {bottom_overflow:g}px")
+                errors.append(f"{context_label} must crop beyond bottom edge by at least 32px, got {bottom_overflow:g}px")
 
     if has_class(html, "banner-pointer") and not has_class(html, "pointer-target"):
         errors.append(".banner-pointer requires a .pointer-target on the key trigger/action/control.")
