@@ -43,6 +43,24 @@ Review:
 
 If one element changes, rerun `check_banner_ui.py --fix`, regenerate the screenshot, and visually inspect the nearby UI and every dependent component, not just the edited element.
 
+## 1.3 Neighbor Module Clearance
+
+Different information modules inside the same source surface must not touch or visually merge after abstraction.
+
+Rules:
+- Keep at least `20px` visible clearance between adjacent modules unless the source design intentionally overlaps them.
+- Apply this to text blocks next to images, form content next to visual panels, table/card groups next to side panels, and foreground controls next to skeleton groups.
+- If a key content column gets too close to a neighboring image or panel, move the content column toward the available empty side first.
+- If moving the column is not enough, shorten lower-priority field lines, option rows, skeleton bars, or card widths before allowing the gap to drop below `20px`.
+- Do not solve a clearance problem by shrinking the whole source surface when there is unused room inside the surface.
+- Add `rect-clearance` markers for known collision-prone pairs, such as a form input line against a right visual image region or a selected chip against nearby skeleton items.
+
+Recommended marker:
+
+```css
+/* ui-check rect-clearance selector=.feature-field avoid-left=620 avoid-top=80 avoid-width=240 avoid-height=420 clearance=20 */
+```
+
 ## 1.1 Internal Padding Consistency
 
 Abstracted content inside one product component must use a consistent inset system.

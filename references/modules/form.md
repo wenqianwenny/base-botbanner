@@ -81,6 +81,19 @@ Abstraction from the approved reference:
 - Keep the right visual/image area if it is part of the source page mood, but it should not compete with the form path.
 - Remove the top operation bar unless it is part of the feature.
 
+PC form clearance rules:
+- The form content column and right visual/image region are separate information modules. They must keep at least `20px` visible clearance after scaling and cropping.
+- Preserve the source content-column alignment: title block, question title, description/skeleton, input line, option rows, and repeated sibling fields must share the same form content start unless the source design explicitly offsets a subcomponent.
+- If the content column approaches the right visual/image region, move the whole content column left before changing typography or shrinking the source surface.
+- If the field/input/option width still reaches the visual region, shorten the lower-priority line or option width. Do not let an input underline, option border, skeleton row, or question text run into the image boundary.
+- When a PC form with a right visual image is used as a left source/context surface, add a `rect-clearance` check between the widest feature field/option and the visual image boundary.
+
+Recommended marker:
+
+```css
+/* ui-check rect-clearance selector=.feature-field avoid-left=<visual-left> avoid-top=<visual-top> avoid-width=<visual-width> avoid-height=<visual-height> clearance=20 */
+```
+
 ---
 
 ## 3. Question List Rules
