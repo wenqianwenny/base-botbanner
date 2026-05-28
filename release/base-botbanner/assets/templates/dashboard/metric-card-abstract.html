@@ -1,0 +1,83 @@
+<!--
+Base Bot Banner dashboard metric-card abstraction template.
+Copy this component when abstracting metric cards.
+Use variant-a with 趋势图1.svg and variant-b with 趋势图2.svg.
+Scale .metric-card-abstract as a whole; do not redraw internal structure.
+-->
+<style>
+  .metric-card-abstract {
+    width: 316px;
+    height: 213px;
+    padding: 24px 22px;
+    border-radius: 16px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .metric-card-top {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .metric-title-skeleton {
+    width: 74px;
+    height: 18px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .metric-value-skeleton {
+    width: 174px;
+    height: 34px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .metric-card-bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .metric-compare-skeleton {
+    width: 52px;
+    height: 12px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+    margin-bottom: 4px;
+  }
+
+  .metric-sparkline {
+    width: 66px;
+    height: 46px;
+    flex: 0 0 auto;
+    display: block;
+  }
+</style>
+
+<div class="metric-card-abstract metric-card-variant-a">
+  <div class="metric-card-top">
+    <div class="metric-title-skeleton"></div>
+    <div class="metric-value-skeleton"></div>
+  </div>
+  <div class="metric-card-bottom">
+    <div class="metric-compare-skeleton"></div>
+    <img class="metric-sparkline" src="../figma-refs/components/趋势图1.svg" alt="">
+  </div>
+</div>
+
+<div class="metric-card-abstract metric-card-variant-b">
+  <div class="metric-card-top">
+    <div class="metric-title-skeleton"></div>
+    <div class="metric-value-skeleton"></div>
+  </div>
+  <div class="metric-card-bottom">
+    <div class="metric-compare-skeleton"></div>
+    <img class="metric-sparkline" src="../figma-refs/components/趋势图2.svg" alt="">
+  </div>
+</div>

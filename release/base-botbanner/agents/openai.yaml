@@ -1,0 +1,8 @@
+interface:
+  display_name: "Base Bot Banner"
+  short_description: "Generate 900x500 Base banners with product UI abstraction."
+  brand_color: "#1456F0"
+  default_prompt: "Use $base-botbanner to audit this Base/Figma UI, load UI Foundation and relevant module rules, write a Visual Strategy, Abstraction Plan, and Asset Lock Manifest, add ui-check markers to fragile UI components, then generate a 900x500 Base product feature banner with non-core UI abstracted, auto-fixed by scripts/check_banner_ui.py --fix, exported as 2x PNG, and verified by screenshot plus strict UI check."
+
+policy:
+  allow_implicit_invocation: true

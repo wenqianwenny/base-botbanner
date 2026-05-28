@@ -1,0 +1,169 @@
+<!--
+Base Bot Banner dashboard ranking-list abstraction template.
+Copy this component when abstracting dashboard leaderboard / ranking list cards.
+Reference: Figma node 54:44227. Base size is 322x340.
+Scale .ranking-card-abstract as a whole; keep the podium and list proportions.
+-->
+<style>
+  .ranking-card-abstract {
+    width: 322px;
+    height: 340px;
+    border-radius: 16px;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ranking-title-skeleton {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    width: 90px;
+    height: 18px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .ranking-podium-avatar {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .ranking-podium-avatar.is-left {
+    left: 45px;
+    top: 83px;
+    width: 52px;
+    height: 53px;
+  }
+
+  .ranking-podium-avatar.is-center {
+    left: 124px;
+    top: 62px;
+    width: 74px;
+    height: 74px;
+  }
+
+  .ranking-podium-avatar.is-right {
+    left: 225px;
+    top: 83px;
+    width: 52px;
+    height: 53px;
+  }
+
+  .ranking-podium-name {
+    position: absolute;
+    top: 145px;
+    width: 45px;
+    height: 18px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+  }
+
+  .ranking-podium-name.is-left {
+    left: 48px;
+  }
+
+  .ranking-podium-name.is-center {
+    left: 141px;
+  }
+
+  .ranking-podium-name.is-right {
+    left: 228px;
+  }
+
+  .ranking-list {
+    position: absolute;
+    left: 20px;
+    bottom: 32px;
+    width: 282px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .ranking-row {
+    width: 100%;
+    height: 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .ranking-row-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+  }
+
+  .ranking-row-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+    flex: 0 0 auto;
+  }
+
+  .ranking-row-name {
+    height: 18px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+    flex: 0 0 auto;
+  }
+
+  .ranking-row-name.is-long {
+    width: 90px;
+  }
+
+  .ranking-row-name.is-short {
+    width: 45px;
+  }
+
+  .ranking-row-name.is-wide {
+    width: 134px;
+  }
+
+  .ranking-row-value {
+    width: 58px;
+    height: 10px;
+    border-radius: 100px;
+    background: rgba(15, 15, 16, 0.06);
+    margin-bottom: 0;
+    flex: 0 0 auto;
+  }
+</style>
+
+<div class="ranking-card-abstract">
+  <div class="ranking-title-skeleton"></div>
+  <div class="ranking-podium-avatar is-left"></div>
+  <div class="ranking-podium-avatar is-center"></div>
+  <div class="ranking-podium-avatar is-right"></div>
+  <div class="ranking-podium-name is-left"></div>
+  <div class="ranking-podium-name is-center"></div>
+  <div class="ranking-podium-name is-right"></div>
+  <div class="ranking-list">
+    <div class="ranking-row">
+      <div class="ranking-row-left">
+        <div class="ranking-row-dot"></div>
+        <div class="ranking-row-name is-long"></div>
+      </div>
+      <div class="ranking-row-value"></div>
+    </div>
+    <div class="ranking-row">
+      <div class="ranking-row-left">
+        <div class="ranking-row-dot"></div>
+        <div class="ranking-row-name is-short"></div>
+      </div>
+      <div class="ranking-row-value"></div>
+    </div>
+    <div class="ranking-row">
+      <div class="ranking-row-left">
+        <div class="ranking-row-dot"></div>
+        <div class="ranking-row-name is-wide"></div>
+      </div>
+      <div class="ranking-row-value"></div>
+    </div>
+  </div>
+</div>
