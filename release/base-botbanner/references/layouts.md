@@ -84,7 +84,7 @@ Rules:
 - Prefer showing more source UI under the primary panel instead of exposing background.
 - The source and primary surfaces should overlap meaningfully; do not merely place them side by side.
 - The right primary surface owns the right safe margin. The source/context surface may move left and must not visually share the same right edge with the primary surface.
-- Compact primary floating panels should be vertically centered on the 900×500 canvas when they fit. Add `vertical-center`; do not rely on visual judgment.
+- Primary floating panel vertical placement follows height-based rules. Do not vertically center small panels by default.
 
 Recommended markers:
 
@@ -92,7 +92,7 @@ Recommended markers:
 /* ui-check edge-safe selector=.source-surface top-min=48 top-max=52 */
 /* ui-check cropped-edge selector=.source-surface side=left,bottom min-out=32 */
 /* ui-check edge-safe selector=.primary-surface right-min=30 right-max=50 */
-/* ui-check vertical-center selector=.primary-surface target-y=250 tolerance=4 */
+/* ui-check primary-placement selector=.primary-surface small-height=360 bottom=60 center-target-y=250 tolerance=4 */
 /* ui-check no-shared-edge a=.primary-surface b=.source-surface edge=right min-delta=40 */
 /* ui-check overlap a=.primary-surface b=.source-surface min-x=80 min-y=80 */
 ```
@@ -112,7 +112,7 @@ Rules:
 - Prefer showing more source UI under the primary panel instead of exposing background.
 - The source and primary surfaces should overlap meaningfully.
 - The left primary surface owns the left safe margin.
-- Compact primary floating panels should be vertically centered on the 900×500 canvas when they fit. Add `vertical-center`; do not rely on visual judgment.
+- Primary floating panel vertical placement follows height-based rules. Do not vertically center small panels by default.
 
 Recommended markers:
 
@@ -120,7 +120,7 @@ Recommended markers:
 /* ui-check edge-safe selector=.source-surface top-min=48 top-max=52 */
 /* ui-check cropped-edge selector=.source-surface side=right,bottom min-out=32 */
 /* ui-check edge-safe selector=.primary-surface left-min=30 left-max=50 */
-/* ui-check vertical-center selector=.primary-surface target-y=250 tolerance=4 */
+/* ui-check primary-placement selector=.primary-surface small-height=360 bottom=60 center-target-y=250 tolerance=4 */
 /* ui-check no-shared-edge a=.primary-surface b=.source-surface edge=left min-delta=40 */
 /* ui-check overlap a=.primary-surface b=.source-surface min-x=80 min-y=80 */
 ```
@@ -141,6 +141,8 @@ Rules:
 - The primary surface must sit above and overlap the secondary/source surface. Side-by-side contact is a failure.
 - The primary surface keeps the relevant side safe margin, usually right `30px` to `50px`.
 - The source and primary surfaces should overlap by at least `80px` on x and y axes.
+- Primary floating panel vertical placement follows height-based rules. If panel height is `<= 360px`, place it `60px` above the banner bottom. If panel height is `> 360px`, vertically center it within the banner. Keep the existing horizontal position and overlap relationship when applying this rule.
+- Do not force all panels to vertical center. Do not force all panels to bottom align. Do not change horizontal alignment when applying vertical placement.
 
 Recommended markers:
 
@@ -149,6 +151,7 @@ Recommended markers:
 /* ui-check cropped-edge selector=.source-surface side=bottom min-out=32 */
 /* ui-check edge-safe selector=.primary-surface right-min=30 right-max=50 */
 /* ui-check overlap a=.primary-surface b=.source-surface min-x=80 min-y=80 */
+/* ui-check primary-placement selector=.primary-surface small-height=360 bottom=60 center-target-y=250 tolerance=4 */
 /* ui-check z-index-above selector=.primary-surface above=.source-surface */
 ```
 
@@ -214,13 +217,13 @@ This crop inference is skipped when `.contained-context-source` is present.
 Upper-layer floating surfaces use a stable default radius:
 
 ```text
-floating panel / popover / modal / dropdown radius: 16px
+floating panel / popover / modal / dropdown radius: var(--radius-card)
 ```
 
 Rules:
-- Apply `border-radius: 16px` to every banner-level floating panel, popover, modal, dropdown, compact picker, add panel, or foreground result panel unless the Figma source provides a different explicit radius.
-- Mark these elements with `.floating-panel` when they are banner-level floating UI. The checker treats missing or non-16px `.floating-panel` radius as a failure.
-- Do not use larger soft-card radii such as `24px`, `28px`, or `32px` for upper floating panels unless the source Figma panel itself uses that radius and the value is recorded in UI Detail Constraints.
+- Apply `border-radius: var(--radius-card)` to every banner-level floating panel, popover, modal, dropdown, compact picker, add panel, or foreground result panel.
+- Mark these elements with `.floating-panel` when they are banner-level floating UI. The checker treats missing or non-token `.floating-panel` radius as a failure.
+- Do not use larger soft-card radii such as `24px`, `28px`, or `32px` for upper floating panels. Map source radii to approved shape tokens.
 - Large lower/source interface frames and device/mockup containers may use their own outer radius. They do not inherit the 16px floating-panel rule.
 - Internal product modules, such as field blocks, option rows, table cells, dashboard cards, and IM bubbles, follow their source/component rules and do not automatically become 16px panels.
 

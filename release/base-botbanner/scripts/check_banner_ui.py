@@ -25,7 +25,7 @@ ANCHOR_RE = re.compile(
 )
 GENERIC_MARKER_RE = re.compile(
     r"/\*\s*ui-check\s+"
-    r"(?P<kind>balanced-padding|content-density|grid-alignment|component-containment|cross-layer-consistency|divider-width|skeleton-variation|no-shadow|shadow-token|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-shared-edge|overlap|vertical-center|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|abstraction-consistency|pointer-target|pointer-asset|surface-count)\s+"
+    r"(?P<kind>balanced-padding|content-density|grid-alignment|component-containment|cross-layer-consistency|divider-width|skeleton-variation|no-shadow|shadow-token|source-fill|skeleton-fill|last-margin-zero|min-size|max-size|radius|outer-frame|z-index-above|rect-clearance|max-repeat|edge-safe|cropped-edge|parent-context|anchored-to|no-shared-edge|overlap|vertical-center|primary-placement|no-excess-blank|group-centered|balanced-content-inset|allowed-text|text-fit|abstraction-consistency|pointer-target|pointer-asset|surface-count)\s+"
     r"(?P<params>.*?)\s*\*/",
     re.DOTALL,
 )
@@ -77,6 +77,44 @@ SHADOW_SECONDARY_SOFT = (
     "0px 10px 28px rgba(158, 170, 191, 0.10), "
     "0px 3px 10px rgba(158, 170, 191, 0.05)"
 )
+RADIUS_TOKENS = {
+    "--radius-pill": 999.0,
+    "--radius-card": 16.0,
+    "--radius-input": 8.0,
+    "--radius-button": 6.0,
+    "--radius-table-cell": 0.0,
+    "--radius-avatar": 999.0,
+}
+RADIUS_TOKEN_BY_VALUE = {
+    999.0: "--radius-pill",
+    16.0: "--radius-card",
+    8.0: "--radius-input",
+    6.0: "--radius-button",
+    0.0: "--radius-table-cell",
+}
+RADIUS_PROPS = (
+    "border-radius",
+    "border-top-left-radius",
+    "border-top-right-radius",
+    "border-bottom-right-radius",
+    "border-bottom-left-radius",
+)
+CONTROL_BORDER_TOKEN = "--border-control-width"
+CONTROL_BORDER_WIDTH = 0.5
+FORM_CONTROL_CLASSES = {
+    "input",
+    "textarea",
+    "select",
+    "dropdown",
+    "search-box",
+    "user-selector",
+    "tag-selector",
+    "date-picker",
+    "time-picker",
+    "nl-input",
+    "select-box",
+    "value-box",
+}
 
 
 def extract_css(html: str) -> str:
@@ -151,6 +189,97 @@ def css_px_number(value: str | None) -> float | None:
     if not match:
         return None
     return float(match.group(1))
+
+
+def radius_token_name(value: str | None) -> str | None:
+    if not value:
+        return None
+    match = re.search(r"var\(\s*(--radius-[A-Za-z0-9_-]+)\s*\)", value)
+    return match.group(1) if match else None
+
+
+def radius_number(value: str | None) -> float | None:
+    token = radius_token_name(value)
+    if token:
+        return RADIUS_TOKENS.get(token)
+    return px_number(value)
+
+
+def radius_token_for_value(value: float | None) -> str | None:
+    if value is None:
+        return None
+    for radius_value, token in RADIUS_TOKEN_BY_VALUE.items():
+        if abs(value - radius_value) <= 0.5:
+            return token
+    return None
+
+
+def check_component_shape_tokens(blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
+    root_props = blocks.get(":root", {})
+    for token, expected_value in RADIUS_TOKENS.items():
+        actual_value = css_px_number(root_props.get(token))
+        if actual_value is None or abs(actual_value - expected_value) > 0.5:
+            errors.append(f":root must define {token}: {expected_value:g}px.")
+
+    for selector, props in blocks.items():
+        for prop_name in RADIUS_PROPS:
+            value = props.get(prop_name)
+            if not value:
+                continue
+            token = radius_token_name(value)
+            if token:
+                if token not in RADIUS_TOKENS:
+                    errors.append(f"{selector} {prop_name} uses unsupported radius token {token}.")
+                continue
+            radius = px_number(value)
+            expected_token = radius_token_for_value(radius)
+            if expected_token:
+                errors.append(f"{selector} {prop_name} must use var({expected_token}) instead of raw {value}.")
+            else:
+                errors.append(f"{selector} {prop_name} uses invented radius {value}; use approved radius tokens only.")
+
+
+def selector_classes(selector: str) -> set[str]:
+    return set(re.findall(r"\.([A-Za-z0-9_-]+)", selector))
+
+
+def border_width_value(props: dict[str, str]) -> float | None:
+    for prop_name in ("border-width", "border"):
+        value = props.get(prop_name)
+        if not value:
+            continue
+        if f"var({CONTROL_BORDER_TOKEN})" in value:
+            return CONTROL_BORDER_WIDTH
+        number = css_px_number(value)
+        if number is not None:
+            return number
+        match = re.search(r"(-?\d+(?:\.\d+)?)px", value)
+        if match:
+            return float(match.group(1))
+    return None
+
+
+def check_form_control_system(blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
+    root_props = blocks.get(":root", {})
+    control_width = css_px_number(root_props.get(CONTROL_BORDER_TOKEN))
+    if control_width is None or abs(control_width - CONTROL_BORDER_WIDTH) > 0.05:
+        errors.append(f":root must define {CONTROL_BORDER_TOKEN}: {CONTROL_BORDER_WIDTH:g}px.")
+
+    for selector, props in blocks.items():
+        if not (selector_classes(selector) & FORM_CONTROL_CLASSES):
+            continue
+        border_value = props.get("border-width") or props.get("border")
+        if not border_value:
+            continue
+        if f"var({CONTROL_BORDER_TOKEN})" not in border_value:
+            width = border_width_value(props)
+            if width is not None:
+                errors.append(f"{selector} form control border width {width:g}px must use var({CONTROL_BORDER_TOKEN}).")
+            else:
+                errors.append(f"{selector} form control border width must use var({CONTROL_BORDER_TOKEN}).")
+        radius_token = radius_token_name(props.get("border-radius"))
+        if radius_token != "--radius-input":
+            errors.append(f"{selector} form control radius must use var(--radius-input).")
 
 
 def css_percent_number(value: str | None) -> float | None:
@@ -593,7 +722,7 @@ def check_skeleton_color(blocks: dict[str, dict[str, str]], errors: list[str]) -
 
 def check_generic_markers(css: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
     for kind, params in iter_generic_markers(css):
-        if kind in {"edge-safe", "cropped-edge", "parent-context", "anchored-to", "no-shared-edge", "overlap", "vertical-center", "no-excess-blank", "content-density", "group-centered", "grid-alignment", "component-containment", "cross-layer-consistency", "skeleton-variation", "balanced-content-inset", "allowed-text", "text-fit", "abstraction-consistency", "pointer-target", "pointer-asset", "surface-count"}:
+        if kind in {"edge-safe", "cropped-edge", "parent-context", "anchored-to", "no-shared-edge", "overlap", "vertical-center", "primary-placement", "no-excess-blank", "content-density", "group-centered", "grid-alignment", "component-containment", "cross-layer-consistency", "skeleton-variation", "balanced-content-inset", "allowed-text", "text-fit", "abstraction-consistency", "pointer-target", "pointer-asset", "surface-count"}:
             continue
         selector = params.get("selector")
         if not selector:
@@ -669,7 +798,7 @@ def check_generic_markers(css: str, blocks: dict[str, dict[str, str]], errors: l
             if expected is None:
                 errors.append(f"ui-check radius missing value=... for {selector}")
                 continue
-            radius = px_number(props.get("border-radius"))
+            radius = radius_number(props.get("border-radius"))
             if radius is None:
                 errors.append(f"ui-check radius failed: {selector} has no border-radius, expected {expected:g}px")
             elif abs(radius - expected) > 0.5:
@@ -704,6 +833,13 @@ def check_generic_markers(css: str, blocks: dict[str, dict[str, str]], errors: l
                 background = props.get("background")
                 if css_compact(expected_background) not in css_compact(background):
                     errors.append(f"ui-check outer-frame failed: {selector} background {background!r}, expected to contain {expected_background!r}")
+            radius = props.get("border-radius", "")
+            expected_padding_text = f"{expected_padding:g}px" if expected_padding is not None else ""
+            if "calc(" not in radius or "--radius-card" not in radius or (expected_padding_text and expected_padding_text not in radius):
+                errors.append(
+                    f"ui-check outer-frame failed: {selector} border-radius must be concentric, "
+                    f"expected calc(var(--radius-card) + {expected_padding_text})"
+                )
         elif kind == "z-index-above":
             above_selector = params.get("above")
             if not above_selector:
@@ -960,6 +1096,36 @@ def check_vertical_center(params: dict[str, str], blocks: dict[str, dict[str, st
             f"ui-check vertical-center failed: {selector} center y {center_y:g}px, "
             f"expected {target_y:g}px ± {tolerance:g}px"
         )
+
+
+def check_primary_placement(params: dict[str, str], blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
+    selector = params.get("selector")
+    if not selector:
+        errors.append("ui-check primary-placement needs selector=...")
+        return
+    rect = get_selector_rect(blocks, selector)
+    if not rect:
+        errors.append(f"ui-check primary-placement failed: cannot derive rect for {selector}")
+        return
+    _left, top, _width, height = rect
+    small_height = px_number(params.get("small-height")) or 360
+    bottom = px_number(params.get("bottom")) or 60
+    target_y = px_number(params.get("center-target-y")) or 250
+    tolerance = px_number(params.get("tolerance")) or 4
+    if height <= small_height:
+        actual_bottom = 500 - top - height
+        if abs(actual_bottom - bottom) > tolerance:
+            errors.append(
+                f"ui-check primary-placement failed: {selector} height {height:g}px <= {small_height:g}px, "
+                f"bottom {actual_bottom:g}px, expected {bottom:g}px ± {tolerance:g}px"
+            )
+    else:
+        center_y = top + height / 2
+        if abs(center_y - target_y) > tolerance:
+            errors.append(
+                f"ui-check primary-placement failed: {selector} height {height:g}px > {small_height:g}px, "
+                f"center y {center_y:g}px, expected {target_y:g}px ± {tolerance:g}px"
+            )
 
 
 def check_component_containment(params: dict[str, str], blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
@@ -1317,15 +1483,15 @@ def check_floating_panel_radius(html: str, blocks: dict[str, dict[str, str]], er
             props = find_rule_by_class(blocks, class_value)
             if not props:
                 continue
-            class_radius = px_number(props.get("border-radius"))
+            class_radius = radius_number(props.get("border-radius"))
             if class_radius is not None:
                 radius = class_radius
                 radius_source = f".{class_value}"
                 break
         if radius is None:
-            errors.append(".floating-panel needs border-radius: 16px on itself or on its concrete panel class.")
+            errors.append(".floating-panel needs border-radius: var(--radius-card) on itself or on its concrete panel class.")
         elif abs(radius - 16) > 0.5:
-            errors.append(f".floating-panel radius failed: {radius_source} border-radius {radius:g}px, expected 16px")
+            errors.append(f".floating-panel radius failed: {radius_source} border-radius {radius:g}px, expected var(--radius-card)")
 
 
 def check_floating_panel_density_contract(css: str, html: str, blocks: dict[str, dict[str, str]], errors: list[str]) -> None:
@@ -1364,6 +1530,7 @@ def check_default_surface_contract(html: str, blocks: dict[str, dict[str, str]],
     source = find_rule_by_class(blocks, "source-surface")
     primary = find_rule_by_class(blocks, "primary-surface")
     contained_context = find_rule_by_class(blocks, "contained-context-source")
+    complete_width_context = has_class(html, "complete-width-source")
     source_rect = None
     primary_rect = None
     if source and primary:
@@ -1386,7 +1553,13 @@ def check_default_surface_contract(html: str, blocks: dict[str, dict[str, str]],
     if source:
         source_rect = source_rect or get_rect(source)
         if source_rect:
-            if contained_context:
+            if complete_width_context:
+                check_margin_range(".complete-width-source", source_rect, ("left", "top"), errors)
+                left, top, width, height = source_rect
+                bottom_overflow = max(0.0, top + height - 500)
+                if bottom_overflow < 32:
+                    errors.append(f".complete-width-source must crop beyond bottom edge by at least 32px, got {bottom_overflow:g}px")
+            elif contained_context:
                 check_margin_range(".contained-context-source", source_rect, ("left", "top", "bottom"), errors)
                 width = source_rect[2]
                 if width > 620:
@@ -1398,7 +1571,10 @@ def check_default_surface_contract(html: str, blocks: dict[str, dict[str, str]],
 
     left_context = find_rule_by_class(blocks, "left-context-source")
     inferred_left_context = False
-    if contained_context:
+    if complete_width_context:
+        rect = None
+        context_label = ".complete-width-source"
+    elif contained_context:
         rect = None
         context_label = ".contained-context-source"
     elif left_context:
@@ -1785,6 +1961,8 @@ def check_geometry_markers(css: str, html: str, blocks: dict[str, dict[str, str]
             check_overlap(params, blocks, errors)
         elif kind == "vertical-center":
             check_vertical_center(params, blocks, errors)
+        elif kind == "primary-placement":
+            check_primary_placement(params, blocks, errors)
         elif kind == "no-excess-blank":
             check_no_excess_blank(params, blocks, errors)
         elif kind == "content-density":
@@ -2013,7 +2191,8 @@ def apply_generic_marker_fixes(css: str) -> str:
         elif kind == "radius":
             expected = px_number(params.get("value"))
             if expected is not None:
-                css = update_rule_property(css, selector, "border-radius", f"{expected:g}px")
+                token = radius_token_for_value(expected)
+                css = update_rule_property(css, selector, "border-radius", f"var({token})" if token else f"{expected:g}px")
         elif kind == "divider-width":
             expected = px_number(params.get("value")) or 0.5
             prop_names = [
@@ -2125,6 +2304,8 @@ def run_checks(html_path: Path, png_path: Path | None) -> list[str]:
     check_shadow_scope(blocks, errors)
     check_im_modules(blocks, errors)
     check_skeleton_color(blocks, errors)
+    check_component_shape_tokens(blocks, errors)
+    check_form_control_system(blocks, errors)
     check_default_surface_contract(html, blocks, errors)
     check_floating_panel_density_contract(css, html, blocks, errors)
     check_default_grid_alignment(blocks, errors)

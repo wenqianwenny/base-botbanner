@@ -263,9 +263,31 @@ For content transformation features, keep the source and result in their real pr
 
 ## 3.3 Figma Source Fidelity
 
-When the user provides a Figma URL, screenshot, or original design file, it becomes the source of truth for product behavior and geometry.
+When the user provides a Figma URL, screenshot, or original design file, it becomes the source of truth for product behavior and geometry. When a source UI screenshot or Figma frame is provided, treat it as a layout specification rather than inspiration.
 
 This product is a strict B-side enterprise product. When using real product screenshots or reproducing existing product UI, do not redesign preserved elements. If an element is preserved, its original style, layout, hierarchy, alignment, typography hierarchy, spacing relationship, component variant, semantic color, and interaction hierarchy must also be preserved.
+
+### Spacing Fidelity Rules
+
+When source UI is provided, spacing must follow the source UI.
+
+Rules:
+- Do not normalize source spacing to token values.
+- Do not redesign layout rhythm.
+- Do not adjust spacing because it looks better.
+- Use the spacing relationship from the source design as the source of truth.
+- Preserve padding, margin, alignment, visual rhythm, and whitespace distribution.
+- If a spacing value exists in source UI, reuse it.
+- Do not replace source values such as `18px` -> `16px`, `22px` -> `24px`, or `37px` -> `32px` just to fit spacing tokens.
+
+Priority order:
+1. Source UI layout
+2. Source UI spacing
+3. Source UI component shape
+4. Design tokens
+5. Visual optimization
+
+Banner composition may move, scale, crop, or simplify whole UI groups, but preserved source components must keep their internal source spacing relationships.
 
 Rules:
 - Inspect the provided reference before composing the banner.
@@ -825,25 +847,125 @@ Implementation requirements:
 
 ---
 
-# 9. Radius System
+# 9. Component Shape Token System
 
-Extracted from component SVGs:
+All UI components must use predefined radius tokens. Do not invent new `border-radius` values.
 
-| Element | Radius | Source |
-|---|---|---|
-| Card / Panel | 12px | Card.svg rx=12 |
-| Input / Select | 8px | Input.svg rx=7.75≈8 |
-| Button | 6px | Button_Basic.svg |
-| Tag (bold bg) | 6px | Tag_Status_Bold.svg rx=6 |
-| Notice bar | 6px | Notice.svg path |
-| Progress bar | full round (pill) | Progress.svg |
-| Checkbox | square | Checkbox.svg |
+```css
+:root {
+  --border-control-width: 0.5px;
+  --radius-pill: 999px;
+  --radius-card: 16px;
+  --radius-input: 8px;
+  --radius-button: 6px;
+  --radius-table-cell: 0px;
+  --radius-avatar: 999px;
+}
+
+.level-tag,
+.status-tag,
+.badge,
+.chip,
+.tag {
+  border-radius: var(--radius-pill);
+}
+
+.card,
+.panel,
+.modal,
+.floating-panel {
+  border-radius: var(--radius-card);
+}
+
+.input,
+.textarea,
+.select,
+.dropdown,
+.search-box,
+.user-selector,
+.tag-selector,
+.date-picker,
+.time-picker {
+  border-radius: var(--radius-input);
+  border-width: var(--border-control-width);
+}
+
+.button,
+.primary-button,
+.secondary-button {
+  border-radius: var(--radius-button);
+}
+
+.avatar {
+  border-radius: var(--radius-avatar);
+}
+```
+
+Only use:
+- `--radius-pill`
+- `--radius-card`
+- `--radius-input`
+- `--radius-button`
+- `--radius-table-cell`
+- `--radius-avatar`
 
 Rules:
-- Foreground floating panels, modal-like result panels, popovers, and banner-level cards use `16px` radius by default unless the Figma/source component specifies another value.
-- If the source Figma design provides a concrete panel radius, preserve that radius exactly and record it in UI Detail Constraints.
-- Do not inflate floating result panels to `20px`, `24px`, or larger rounded corners just to make them feel softer. Oversized radius makes Base UI look unlike the source product.
-- Add a ui-check marker for fragile foreground panel radius when the panel is hand-coded, for example `/* ui-check radius selector=.polish-panel value=16 */`.
+- Pills, level tags, status tags, badges, chips, and tags use `--radius-pill`.
+- Cards, panels, modals, and floating panels use `--radius-card`.
+- Inputs, textareas, selects, dropdowns, user selectors, tag selectors, and date pickers use `--radius-input`.
+- Buttons use `--radius-button`.
+- Table cells use `--radius-table-cell`.
+- Avatars use `--radius-avatar`.
+- If source UI provides a component shape, map it to the closest approved token instead of inventing a new value.
+- Add a ui-check marker for fragile foreground panel radius, for example `/* ui-check radius selector=.floating-panel value=16 */`.
+
+## 9.1 Form Control System
+
+All form controls must share the same visual style.
+
+Includes:
+- Input
+- Textarea
+- Select
+- Dropdown
+- Search Box
+- User Selector
+- Tag Selector
+- Date Picker
+- Time Picker
+
+Use:
+
+```css
+:root {
+  --border-control-width: 0.5px;
+  --radius-input: 8px;
+}
+
+.input,
+.textarea,
+.select,
+.dropdown,
+.search-box,
+.user-selector,
+.tag-selector,
+.date-picker,
+.time-picker {
+  border-width: var(--border-control-width);
+  border-radius: var(--radius-input);
+}
+```
+
+Forbidden:
+- `border-width: 1px`
+- `border-width: 2px`
+- mixed border widths
+- random radius values
+- different control styles in the same scene
+
+All form controls must use:
+- `0.5px` border
+- `8px` radius
 
 ---
 

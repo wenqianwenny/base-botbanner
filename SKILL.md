@@ -9,7 +9,7 @@ Generate 900×500px HTML/CSS banners for Lark Base feature announcements.
 
 **Abstraction is mandatory whenever product UI, screenshots, Figma URLs, or design references are provided.** Do not directly paste, trace, or fully reproduce the source UI. Preserve product logic and key geometry, then abstract non-core information into clean product-native skeletons/placeholders.
 
-**Figma Banner Specification is the concrete Base banner standard.** When a Figma design/spec/reference is provided, treat it as the executable product standard, not mood inspiration. Preserve product behavior, component relationships, spacing, alignment, radius, shadow, states, and asset choices unless an abstraction rule explicitly simplifies non-core details. If skill rules and Figma conflict, Figma wins for product logic and UI detail constraints; banner composition rules only decide canvas safety, crop, and visual hierarchy around those constraints.
+**Figma Banner Specification is the concrete Base banner standard.** When a Figma design/spec/reference is provided, treat it as the executable product standard and layout specification, not mood inspiration. Preserve product behavior, component relationships, spacing, alignment, radius, shadow, states, and asset choices unless an abstraction rule explicitly simplifies non-core details. If skill rules and Figma conflict, Figma wins for product logic and UI detail constraints; banner composition rules only decide canvas safety, crop, and visual hierarchy around those constraints.
 
 **Read [`references/visual-direction.md`](references/visual-direction.md) before generating any new banner.** It is the taste layer: anti-AI cliches, composition strategy, variant planning, and the required Visual Strategy gate.
 
@@ -256,6 +256,7 @@ Abstraction Plan:
 - Information to skeletonize:
 - Information to remove:
 - Text abstraction budget:
+- Source spacing constraints:
 - UI Detail Constraints:
 - Required local assets:
 - Component templates / module rules needed:
@@ -271,6 +272,7 @@ Rules:
 - Remove decorative or unrelated product chrome when it does not explain the feature path.
 - For non-core top bars, toolbars, page headers, and top-right actions, remove the whole chrome region instead of keeping empty button/control shells with text removed.
 - Treat provided Figma rules as the concrete Base banner standard. Do not reinterpret exact spacing, alignment, state, or component relationships as loose visual inspiration.
+- Spacing Fidelity is mandatory for preserved source UI. Record exact source spacing relationships before coding, and do not normalize source values to design-token values such as `18px` -> `16px`, `22px` -> `24px`, or `37px` -> `32px`.
 - Extract UI Detail Constraints from the source design before coding. Include component anchoring, exact gaps, alignment, radius, shadows, selected state, and interaction-specific placement that must not drift during banner composition.
 - Do not keep raw screenshots as the main UI layer. Rebuild/compose the UI as HTML using abstraction rules and templates.
 - If the source UI or banner needs any avatar/member/user/person/assignee visual, it must be an `<img>` asset from `figma-refs/components/avatar/`. Do not draw avatar placeholders, CSS circles, initials, generated faces, cropped screenshots, or external images.
@@ -342,6 +344,7 @@ Before coding, save the planning work to `output/<banner-name>.brief.md`. This b
 ## User Choices
 ## Visual Strategy
 ## Source UI Audit
+## Source UI Fidelity
 ## Temporary Module Rule
 ## Abstraction Plan
 ## UI Detail Constraints
@@ -474,10 +477,10 @@ Apply design tokens from `references/design.md`:
 - Grid alignment → `references/ui-foundation.md` Section 1. Same-level cards/components in one row must share top and bottom alignment; height difference must be `<= 4px`. Add `ui-check grid-alignment` for hand-positioned card/grid rows.
 - Divider width → `references/ui-foundation.md` Section 1.6. All product UI divider lines use `0.5px`; add `ui-check divider-width` for table grid lines, card section dividers, and panel header/body dividers. Component borders are not treated as dividers.
 - Skeleton length variation → `references/ui-foundation.md` Section 1.4.1. Repeated abstract text lines must use at least three visible widths and should simulate real copy length; add `ui-check skeleton-variation` for repeated skeleton groups.
-- Floating panel radius → `references/layouts.md` Section 6 and `references/ui-foundation.md` Section 4.3. Banner-level floating panels/popovers/modals/dropdowns use `border-radius: 16px` by default and must carry `.floating-panel` plus a radius check unless Figma explicitly specifies another radius.
+- Floating panel radius → `references/layouts.md` Section 6 and `references/ui-foundation.md` Section 4.3. Banner-level floating panels/popovers/modals/dropdowns use `border-radius: var(--radius-card)` by default and must carry `.floating-panel` plus a radius check. All component radii must use the approved Component Shape Token System in `references/design.md`; do not write invented raw `border-radius` values.
 - Floating panel shadow → `references/ui-foundation.md` Section 4.2 and `references/design.md` Section 11. Banner-level primary floating panels use `box-shadow: var(--shadow-primary-strong)`; smaller menus/popovers/backing plates use `box-shadow: var(--shadow-secondary-soft)`. Add `ui-check shadow-token` for hand-coded floating panels. Do not invent or copy arbitrary shadow values.
 - Floating panel content density → `references/ui-foundation.md` Section 2.3. Every `.floating-panel` uses `24px` internal padding on all four sides by default and must not keep empty footer/action space after buttons are removed. Add `ui-check content-density` to every floating panel.
-- Primary floating panel vertical centering → `references/layouts.md`. Compact primary floating panels must add `ui-check vertical-center selector=.primary-surface target-y=250 tolerance=4` when they fit on the 900×500 canvas.
+- Primary floating panel vertical placement → `references/layouts.md`. Use height-based placement: panels `<= 360px` high sit `60px` above the banner bottom; panels `> 360px` are vertically centered. Add `ui-check primary-placement selector=.primary-surface small-height=360 bottom=60 center-target-y=250 tolerance=4`.
 - Floating panel anchoring → Section 3.4. Menus/popovers/dropdowns must stay anchored to their trigger, preserving source side and gap such as `4px` above an icon button.
 
 Before final coding, run the anti-cliche filter from `references/visual-direction.md`. Remove decorative AI tropes, fake metrics, fake logos, filler icon clouds, and unnecessary cards.

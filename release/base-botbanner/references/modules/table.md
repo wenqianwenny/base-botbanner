@@ -72,6 +72,8 @@ Remove:
 - side navigation file list when it is only product chrome
 - add-field/add-record columns unless the feature is about adding fields/records
 
+If a toolbar item is kept because it explains the feature path, preserve its source Button variant, size, icon size, text style, spacing, and state. Do not invent selected/active backgrounds, blue pills, hover states, or larger hit areas unless that exact state exists in the source UI.
+
 If more than 5 repeated abstract-only rows are visible, remove extras instead of making the table taller.
 
 ---
@@ -108,6 +110,7 @@ Field icons:
 - Keep field-type icons in the header if they help distinguish field types.
 - Non-core field icons may be simplified, but they must stay consistent per column.
 - Do not mix arbitrary icon shapes within the same header row.
+- View tab icons are source UI evidence. If a table/grid view tab is kept, use the locked source/product view icon such as `icon_bitablegrid_outlined.svg`; do not replace it with CSS squares, dots, generic blocks, or invented selected marks.
 
 ---
 

@@ -372,16 +372,18 @@ Large lower-layer product interfaces need a visible outside frame, not only a th
 
 Rules:
 - Build the frame as a wrapper around the product UI.
-- Frame thickness: `6px`, implemented as wrapper `padding: 6px`.
+- Frame thickness: `10px`, implemented as wrapper `padding: 10px`.
 - Frame color / opacity: `background: rgba(255, 255, 255, 0.5)`.
 - The product UI sits inside the wrapper; do not draw this as an inset border on the product UI itself.
+- The frame and inner UI must be concentric. Outer frame radius = inner UI radius + frame padding.
+- For a `10px` outer frame around a `--radius-card` inner surface, use `border-radius: calc(var(--radius-card) + 10px)` on the wrapper and `border-radius: var(--radius-card)` on the inner UI.
 - Keep the full wrapper visible on non-cropped sides. Cropped sides may cut the wrapper intentionally.
 - Use a normal `1px solid rgba(255,255,255,0.72)` outline only for small flat panels or foreground separation, not for a large secondary/background interface.
 
 Recommended check:
 
 ```css
-/* ui-check outer-frame selector=.secondary-frame padding=6 background="rgba(255, 255, 255, 0.5)" */
+/* ui-check outer-frame selector=.secondary-frame padding=10 background="rgba(255, 255, 255, 0.5)" */
 ```
 
 ## 4.2 Elevation Scope
@@ -425,9 +427,9 @@ Rules:
 
 Banner-level floating UI has a shared radius baseline:
 
-- Default radius for upper floating panels, popovers, dropdowns, compact selection panels, modal fragments, and foreground result panels: `16px`.
-- Use `.floating-panel` on these elements and put `border-radius: 16px` on that selector or a selector that directly includes `.floating-panel`.
-- If Figma explicitly uses another radius, use the Figma value and record it in UI Detail Constraints; otherwise do not improvise.
+- Default token for upper floating panels, popovers, dropdowns, compact selection panels, modal fragments, and foreground result panels: `--radius-card`.
+- Use `.floating-panel` on these elements and put `border-radius: var(--radius-card)` on that selector or a selector that directly includes `.floating-panel`.
+- If Figma explicitly uses another radius, map it to the closest approved shape token and record that mapping in UI Detail Constraints; otherwise do not improvise.
 - Do not apply this rule to lower/source interface frames, device mockups, or product-internal modules. Those surfaces follow source geometry or their module rules.
 
 Required check:
@@ -580,7 +582,7 @@ Supported markers:
 /* ui-check max-size selector=.bubble max-width=320 */
 /* ui-check radius selector=.floating-panel value=16 */
 /* ui-check radius selector=.polish-panel value=16 */
-/* ui-check outer-frame selector=.secondary-frame padding=6 background="rgba(255, 255, 255, 0.5)" */
+/* ui-check outer-frame selector=.secondary-frame padding=10 background="rgba(255, 255, 255, 0.5)" */
 /* ui-check z-index-above selector=.form-panel above=.action-menu */
 /* ui-check rect-clearance selector=.form-panel avoid-left=392 avoid-top=445 avoid-width=32 avoid-height=32 clearance=8 */
 /* ui-check max-repeat selector=.action-menu item-class=menu-row exclude-class=selected max=5 */
@@ -610,7 +612,7 @@ Marker rules:
 - Use `min-size` on complete-interface primary surfaces.
 - Use `max-size` on secondary internal modules that must not touch their parent edge after the parent is cropped or narrowed.
 - Use `radius` on foreground floating panels, modal-like result panels, and any hand-coded panel whose source radius must not drift. Default to `16px` for `.floating-panel` unless Figma explicitly says otherwise.
-- Use `outer-frame` on large secondary/background product UI wrappers so their visible frame stays `6px` and `rgba(255, 255, 255, 0.5)`.
+- Use `outer-frame` on large secondary/background product UI wrappers so their visible frame stays `10px`, `rgba(255, 255, 255, 0.5)`, and geometrically concentric with the inner UI.
 - Use `z-index-above` for product-logic layer order.
 - Use `rect-clearance` to protect key triggers/source fields from overlap.
 - Use `max-repeat` for repeated abstract-only lists and menus; cap at `5` by default.

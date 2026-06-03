@@ -23,6 +23,10 @@ REQUIRED_SECTIONS = (
 )
 
 HEADING_RE = re.compile(r"^(?P<level>#{2,3})\s+(?P<title>.+?)\s*$", re.MULTILINE)
+SPACING_TERMS_RE = re.compile(
+    r"(spacing|padding|gap|margin|inset|rhythm|whitespace|间距|内边距|外边距|留白|视觉节奏)",
+    re.IGNORECASE,
+)
 
 
 def normalize_heading(value: str) -> str:
@@ -62,6 +66,13 @@ def validate(path: Path) -> list[str]:
     verification = sections.get(normalize_heading("Verification"), "")
     if verification and "check_banner_brief.py" not in verification:
         errors.append("Verification must mention check_banner_brief.py.")
+
+    source_fidelity = sections.get(normalize_heading("Source UI Fidelity"), "")
+    ui_constraints = sections.get(normalize_heading("UI Detail Constraints"), "")
+    if source_fidelity or ui_constraints:
+        spacing_context = f"{source_fidelity}\n{ui_constraints}"
+        if not SPACING_TERMS_RE.search(spacing_context):
+            errors.append("Source UI Fidelity / UI Detail Constraints must record source spacing constraints.")
 
     user_choices = sections.get(normalize_heading("User Choices"), "")
     if user_choices:
